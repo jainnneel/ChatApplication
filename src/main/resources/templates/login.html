@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+	xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5"
+	xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+<meta charset="ISO-8859-1">
+<title>Insert title here</title>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+</head>
+<body>
+
+<div id="loginform">
+		<h2>Login</h2>
+		<div th:if="${param.error}">Invalid username or password.</div>
+		<div th:if="${param.expired}">Invalid username or password.</div>
+		<div th:if="${param.logout}">You have been logged out.</div>
+		<form action="/login" method="post">
+			MobileNo.:<input type="text" name="username"> Password:<input
+				type="text" name="password"> <input type="checkbox"
+				name="remember-me"> Remember me?<br> <br>
+			<button type="submit">Login</button>
+		</form>
+	</div>
+
+</body>
+</html>
