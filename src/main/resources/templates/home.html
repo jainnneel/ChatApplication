@@ -100,7 +100,7 @@
 	</div>
 
 <script id="message-template" type="text/x-handlebars-template">
-    <li class="clearfix">
+    <li class="clearfix" id="messages_{{messageid}}">
         <div class="message-data align-right">
             <span class="message-data-time">{{time}}</span> &nbsp; &nbsp;
             <span class="message-data-name">You</span> <i class="fa fa-circle me"></i>
@@ -108,13 +108,13 @@
         <div class="message other-message float-right">
             {{messageOutput}}
 	<button onclick="deletemessage('{{messageid}}')" >delete</button>
-	{{messageid}}
         </div>
+	<span id="read_{{messageid}}" >{{read}}</span>
     </li>
 </script>
 
 <script id="message-response-template" type="text/x-handlebars-template">
-    <li>
+    <li id="messages_{{messageid}}">
         <div class="message-data">
             <span class="message-data-name"><i class="fa fa-circle online"></i> {{userName}}</span>
             <span class="message-data-time">{{time}}</span>
@@ -130,11 +130,12 @@
 </body>
 
 <script type="text/javascript">
-const url = 'http://localhost:8080';
+const url = 'http://192.168.0.109:8080';
 let stompClient;
 let selectedUser;
 let toMessage;
 let newMessages = new Map();
+
 
 function connectToChat(userName) {
     console.log("connecting to chat...")
@@ -145,14 +146,13 @@ function connectToChat(userName) {
         stompClient.subscribe("/topic/messages/" + userName, function (response) {
         	let data = JSON.parse(response.body);
       	    if (selectedUser == data.fromLogin) {
-                render(data.message, data.fromLogin);
-            } else if(data.message==userName){
-            	fecthmessages(selectedUser)
+      	    	render(data.message, data.fromLogin);
+      	    	sendreadNotification(data.fromLogin,userName)
             }else {
                 newMessages.set(data.fromLogin, data.message);
+                $('newmessageNotify_'+data.fromLogin).hide()
              	$('#newmessage_'+data.fromLogin).append(`<span id=newmessageNotify_${data.fromLogin} style=color: red>+1</span>`);
             }
-             
         });
         
         stompClient.subscribe("/topic/status/" + userName, function (response) {
@@ -163,35 +163,72 @@ function connectToChat(userName) {
         	}else if(data.online=='ofline'){
          	  $('#online_'+data.mobile).hide();	
         	}
-               
           });
+        
         stompClient.subscribe("/topic/offlineMessage/" + userName, function (response) {
         	let data = JSON.parse(response.body);
         	console.log(data)
         	for(var i = 0;i<data.length;i++){
-        	   $('#oflineMessage_'+data[i]).innerHTML=''; 	
+        	   $('#oflineMessage_'+data[i]).innerHTML=''; 
+        	   unSeenMessage=1;
         	   $('#newmessage_'+data[i]).append(`<span id=oflineMessage_${data[i]} style=color: red>+1</span>`);
-		}
+        	   $('#oflineMessage_'+data[i-1]).hide();
+        	}
         });
         stompClient.subscribe("/topic/groupMessage/" + userName, function (response) {
         	let data = JSON.parse(response.body);
         	 if (selectedUser == data.toGroup) {
-        	 console.log(selectedUser+"==="+data.toGroup)
                  render(data.message, data.fromLogin);
              	}else {
-               	 console.log(selectedUser+"!=="+data.toGroup)
                  newMessages.set(data.toMobile, data.message);
               	$('#newmessage_'+data.toGroup).append(`<span id=newmessageNotify_${data.toGroup} style=color: red>+1</span>`);
              }
+        });
+        
+        stompClient.subscribe("/topic/readMessages/" + userName, function (response) {
+        	let data = JSON.parse(response.body);
+        	for(var i = 0;i<data.length;i++){
+        	    $('#read_'+data[i].id).html(data[i].seenOrNot)
+        	}
         }); 
+        
+        stompClient.subscribe("/topic/sendDoneMessages/" + userName, function (response) {
+        	let data = JSON.parse(response.body);
+        	    console.log("#read_"+data.chatId)
+        	    $('#read_'+data.chatId).html(data.seenOrNot)
+        }); 
+        
+        stompClient.subscribe("/topic/deletemessage/" + userName, function (response) {
+        	let data = JSON.parse(response.body);
+        	$('#messages_'+data.chatId).hide();
+        }); 
+        
     });
 }
-console.log($('#mobilenum').text())
-connectToChat($('#mobilenum').text());
+
+
+var connectChannel = (function(){
+	  let wasCalled = false;
+	  console.log(wasCalled)
+	  return function(){
+	    if(wasCalled){
+	    	console.log('iff')
+	      return;
+	    }
+	    else {
+	    	console.log('else')
+	    	 connectToChat($('#mobilenum').text());
+	      wasCalled = true;
+	    }
+	  };
+})();
+
+connectChannel();
 
 setTimeout(function(){
 	sendOnlineMessage();
  	}, 2000);
+
 const fecthmessages = (userName) => {
 	console.log("fetchmessages")
 	$.ajax({
@@ -211,7 +248,8 @@ const fecthmessages = (userName) => {
 				            messageOutput: data[i].message,
 				            time:data[i].date,
 				            toUserName: data[i].toMobile,
-				            fromUser:data[i].fromMobile
+				            fromUser:data[i].fromMobile,
+				            read:data[i].seenOrNot
 				        };
 				$chatHistoryList.append(template(context));
 			}else{
@@ -220,10 +258,11 @@ const fecthmessages = (userName) => {
 				    messageid:	data[i].id, 		
 				    response: data[i].message,
 			            time:data[i].date,
-			            userName : data[i].fromMobile
+			            userName : data[i].fromMobile,
 			        };
-			        $chatHistoryList.append(templateResponse(contextResponse));
+			          $chatHistoryList.append(templateResponse(contextResponse));
 				}
+			   
 			} 
 		} 
   	 });
@@ -266,25 +305,31 @@ const fetchGroupChat = (groupName) => {
   	 });
 }
 
-function sendMsg(from, text) {
+function sendMsg(from, text,chatId) {
+	
    if(toMessage==0){
+	   console.log(from)
 	stompClient.send("/app/chat/" + selectedUser, {}, JSON.stringify({
        		 fromLogin: from,
       		 message: text,
-       		 date:getCurrentTime()
+       		 date:getCurrentTime(),
+	         chatId:chatId,
+	         seenOrNot:'send'
     }));
    }else{
 	stompClient.send("/app/group/" + selectedUser, {}, JSON.stringify({
 	       fromLogin: from,
 	       message: text,
-	       date:getCurrentTime()
+	       date:getCurrentTime(),
+	       chatId:chatId,
+	       seenOrNot:'send'
 	    }));  
    }
 }
 
-function sendDeleteMsg(userName) {
+function sendDeleteMsg(mid) {
     stompClient.send("/app/chat/delete/" + selectedUser, {}, JSON.stringify({
-        message: userName,
+    	chatId:mid
     }));
 }
 
@@ -314,8 +359,15 @@ function sendDeleteOfflineGroupMessages(userName,groupName){
     }));
 }
 
+function sendreadNotification(sender,receiver){
+	stompClient.send("/app/chat/readMessage", {}, JSON.stringify({
+		fromMobile:sender,
+		toMobile:receiver
+	    }));
+}
 
-function selectUser(userName) {
+
+function selectUser(userName,name) {
     toMessage=0;	
     console.log("selecting users: " + userName);
     selectedUser = userName;
@@ -326,10 +378,15 @@ function selectUser(userName) {
         render(newMessages.get(userName), userName);
     } */
     $('#selectedUserId').html('');
-    $('#selectedUserId').append('Chat with ' + userName);
+    $('#selectedUserId').append('Chat with ' + name);
     $('#newmessageNotify_'+selectedUser).hide();
     $('#oflineMessage_'+selectedUser).hide();
-    sendDeleteOfflineMessages([[${user.mobile}]],userName);
+   /*  sendDeleteOfflineMessages([[${user.mobile}]],userName); */
+    console.log($('#newmessageNotify_'+selectedUser).text())
+    if($('#newmessageNotify_'+selectedUser).text().includes('+1')){
+   	 sendreadNotification(selectedUser,[[${user.mobile}]]);
+    }
+    scrollToBottom();
     fecthmessages(userName);
 }
 function selectGroup(groupName) {
@@ -341,9 +398,12 @@ function selectGroup(groupName) {
     $('#selectedUserId').append('Chat with ' + groupName);
     $('#newmessageNotify_'+selectedUser).hide();
     $('#oflineMessage_'+selectedUser).hide();
-    sendDeleteOfflineGroupMessages([[${user.mobile}]],groupName);
+   /*  sendDeleteOfflineGroupMessages([[${user.mobile}]],groupName); */
     fetchGroupChat(groupName)
 }
+
+var listOfUser=[];
+var listOfGroup=[];
 
 const getAllGroupAddedByUser = () => {
 	$.ajax({
@@ -354,8 +414,9 @@ const getAllGroupAddedByUser = () => {
 		dataType : 'json',
 		success : function(data) {
 			for(var i = 0;i<data.length;i++){
-		    		 $('#usersList').append(`<a href=# onclick=selectGroup('${data[i].groupName}')><li id=newmessage_${data[i].groupName}>${data[i].groupName}(Group)</li></a>`) 
-			}  
+				listOfGroup.push(data[i])
+/* 		    		 $('#usersList').append(`<a href=# onclick=selectGroup('${data[i].groupName}')><li id=newmessage_${data[i].groupName}>${data[i].groupName}(Group)</li></a>`) 
+ */			}  
 		}
 	   });
 }
@@ -370,18 +431,46 @@ const getAllUserAddedByUser = () => {
 			success : function(data) {
 				$('#usersList').html('');
 				for(var i = 0;i<data.length;i++){
-			    		$('#usersList').append(`<a href=# onclick=selectUser('${data[i].mobile}') ><li id=newmessage_${data[i].mobile} >${data[i].name}<span  id=online_${data[i].mobile}>${data[i].status}</span></li></a>`)
-				} 
+					console.log(listOfUser.push(data[i]))
+/* 					$('#usersList').append(`<a href=# onclick=selectUser('${data[i].mobile}') ><li id=newmessage_${data[i].mobile} >${data[i].name}<span  id=online_${data[i].mobile}>${data[i].status}</span></li></a>`)
+ */				} 
 			}
 		   });
-	}
+	    }
 
- getAllUserAddedByUser();
- 
- setTimeout(function(){
-	 getAllGroupAddedByUser();
- },500);
- 
+var getUser = (function(){
+	  var wasCalled = false;
+	  return function(){
+	    if(wasCalled){
+	      return;
+	    }
+	    else {
+	      wasCalled = true;
+	    }
+	    getAllUserAddedByUser();
+	    getAllGroupAddedByUser();
+	  
+	  };
+	})();
+getUser();
+
+setTimeout(function(){
+	 console.log(listOfUser.length)
+	 dislpayUserList()
+	 dislpayGroupList()
+ 	}, 500);
+
+ function dislpayUserList(){
+	 for(var i=0;i<listOfUser.length;i++){
+		 $('#usersList').append(`<a href=# onclick=selectUser('${listOfUser[i].mobile}','${listOfUser[i].name}') ><li id=newmessage_${listOfUser[i].mobile} >${listOfUser[i].name}<span  id=online_${listOfUser[i].mobile}>${listOfUser[i].status}</span></li></a>`)
+	 }
+ }
+
+ function dislpayGroupList(){
+	 for(var i=0;i<listOfGroup.length;i++){
+	 	$('#usersList').append(`<a href=# onclick=selectGroup('${listOfGroup[i].groupName}')><li id=newmessage_${listOfGroup[i].groupName}>${listOfGroup[i].groupName}(Group)</li></a>`) 
+	 }
+ }
 
 	var i =0;
 	const addUser = () => {
@@ -452,7 +541,6 @@ const getAllUserAddedByUser = () => {
 	
 	const  deletemessage = (messageid) => {
 		if (confirm("Are you sure?")) {
-			fecthmessages(selectedUser);
 			$.ajax({
 	  			type : "POST",
 	  			contentType : "application/json",
@@ -461,8 +549,8 @@ const getAllUserAddedByUser = () => {
 	  			dataType : 'json',
 	  			success : function(data) {
 	  				if(data.status=="done"){
-	  					sendDeleteMsg(selectedUser);
-	  					fecthmessages(selectedUser);
+	  					sendDeleteMsg(messageid);
+	  					$('#messages_'+messageid).hide();
 	  				}else{
 	  					alert("try again")
 	  				}

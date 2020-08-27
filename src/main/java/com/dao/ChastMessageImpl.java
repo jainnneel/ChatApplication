@@ -14,12 +14,14 @@ public class ChastMessageImpl {
     @Autowired
     ChatMessageService chatMessageService;
     
-    public void createChatMessage(ChatMessage chatMessage) {
+    public ChatMessage createChatMessage(ChatMessage chatMessage) {
+        ChatMessage chatMessage2=null;
         try {
-            chatMessageService.save(chatMessage);
+            chatMessage2 =   chatMessageService.save(chatMessage);
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return chatMessage2;
     }
     
     public List<ChatMessage> getAllMessageForUser(String tomobile,String fromMobile){
@@ -51,5 +53,30 @@ public class ChastMessageImpl {
             e.printStackTrace();
         }
         return result;
+    }
+
+    public List<ChatMessage> setReadReciept(ChatMessage chatMessage) {
+        List<ChatMessage> chatMessages=null;
+        try {
+            chatMessages = chatMessageService.getAllChatMessages(chatMessage.getFromMobile(),chatMessage.getToMobile(),"send","received");
+            for(ChatMessage chat: chatMessages) {
+                chat.setSeenOrNot("seen");
+            }
+            chatMessageService.saveAll(chatMessages);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return chatMessages;
+    }
+
+    public List<String> getAllUnSeenMessagesForUser(String mobile) {
+        List<String> mobileList = null;
+        try {
+            mobileList =chatMessageService.getAllUnSeenMessagesForUser(mobile,"send");
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return mobileList;
     }
 }

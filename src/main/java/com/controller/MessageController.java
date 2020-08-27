@@ -45,21 +45,21 @@ public class MessageController {
     private GroupChatImpl groupImpl;
     
     @MessageMapping("/chat/{to}")
-    public void sendMessage(@DestinationVariable String to,MessageModel messageModel) {
+    public void sendMessage(@DestinationVariable String to,@Payload MessageModel messageModel) {
         UserEntity userByMobile = userImpl.getUserByMobile(to);
         
-        chatimpl.createChatMessage(new ChatMessage(messageModel.getMessage(),messageModel.getFromLogin(),to,messageModel.getDate()));
         
         if(WebSocketSessionListener.getConnectedClientId().contains(to.trim())==true) {
-        
+
             if(userByMobile!=null) {
-                
+                ChatMessage createChatMessage = chatimpl.createChatMessage(new ChatMessage(messageModel.getChatId(),messageModel.getSeenOrNot(),messageModel.getMessage(),messageModel.getFromLogin(),to,messageModel.getDate()));
+                messageModel.setChatId(createChatMessage.getId());
                 simpMessagingTemplate.convertAndSend("/topic/messages/"+to,messageModel);
             }
 
         }else {
-            
-            offlineService.createMessage(new OfflineMessage(messageModel.getMessage(),messageModel.getFromLogin(),to,messageModel.getDate()));
+            chatimpl.createChatMessage(new ChatMessage(messageModel.getChatId(),messageModel.getSeenOrNot(),messageModel.getMessage(),messageModel.getFromLogin(),to,messageModel.getDate()));
+//            offlineService.createMessage(new OfflineMessage(messageModel.getChatId(), messageModel.getMessage(),messageModel.getFromLogin(),to,messageModel.getDate()));
         }
     }
         
@@ -69,7 +69,7 @@ public class MessageController {
         
         List<UserEntity> groupMembers =  userImpl.getAllUserInGroup(groupChat.getGid());
         
-        chatimpl.createChatMessage(new ChatMessage(messageModel.getMessage(),messageModel.getFromLogin(),to,messageModel.getDate()));
+        chatimpl.createChatMessage(new ChatMessage(messageModel.getChatId(),"",messageModel.getMessage(),messageModel.getFromLogin(),to,messageModel.getDate()));
         
         messageModel.setToGroup(to);
         
@@ -82,10 +82,10 @@ public class MessageController {
                 System.out.println("send!!!!!!!!");
                 
                 simpMessagingTemplate.convertAndSend("/topic/groupMessage/"+user.getMobile(),messageModel);
-            
-            }else {
+
+               }else {
                 
-                offlineService.createMessage(new OfflineMessage(messageModel.getMessage(),messageModel.getToGroup(),user.getMobile(),messageModel.getDate()));
+                offlineService.createMessage(new OfflineMessage(messageModel.getChatId(),messageModel.getMessage(),messageModel.getToGroup(),user.getMobile(),messageModel.getDate()));
             }
           }
         }
@@ -93,22 +93,26 @@ public class MessageController {
     
     @MessageMapping("/chat/delete/{to}")
     public void deleteMessage(@DestinationVariable String to,MessageModel messageModel) {
-            simpMessagingTemplate.convertAndSend("/topic/messages/"+to,messageModel);
+            simpMessagingTemplate.convertAndSend("/topic/deletemessage/"+to,messageModel);
     }
     
     @MessageMapping("/chat/read/{to}")
     public void readMessage(@DestinationVariable String to,MessageModel messageModel) {
+            System.out.println(messageModel.getChatId()+"dsaaaaaaaaaaa");
             simpMessagingTemplate.convertAndSend("/topic/messages/"+to,messageModel);
     }
     @MessageMapping("/chat/online")
     public void userOnline(@Payload UserEntity entity,SimpMessageHeaderAccessor headerAccessor ) {
         WebSocketSessionListener.setConnectedClientId(entity.getMobile());
         List<UserEntity> userList = addingImpl.getAllUserAddedByUser(entity.getMobile());
-        List<String> mobileList = offlineService.getAllUserInformation(entity.getMobile());
+        
+        List<String> userMobile = chatimpl.getAllUnSeenMessagesForUser(entity.getMobile());
+        
+//        List<String> mobileList = offlineService.getAllUserInformation(entity.getMobile());
         for(UserEntity u:userList) {
             simpMessagingTemplate.convertAndSend("/topic/status/"+u.getMobile(),new OnlineStatus(entity.getMobile(),"online"));
         }
-        simpMessagingTemplate.convertAndSend("/topic/offlineMessage/"+entity.getMobile(),mobileList);
+        simpMessagingTemplate.convertAndSend("/topic/offlineMessage/"+entity.getMobile(),userMobile);
         headerAccessor.getSessionAttributes().put("username", entity.getMobile());
     }
     
@@ -120,5 +124,11 @@ public class MessageController {
     @MessageMapping("/chat/offlineGroupMessage")
     public void deleteofflineGroupMessage(@Payload ChatMessage chatMessage) {
         offlineService.deleteOfflineGroupMessage(chatMessage.getFromMobile(),chatMessage.getToMobile());
+    }
+    
+    @MessageMapping("/chat/readMessage")
+    public void readMessage(@Payload ChatMessage chatMessage) {
+        List<ChatMessage> setReadReciept = chatimpl.setReadReciept(chatMessage);
+        simpMessagingTemplate.convertAndSend("/topic/readMessages/"+chatMessage.getFromMobile(),setReadReciept);
     }
 }
