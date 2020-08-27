@@ -16,5 +16,12 @@ public interface ChatMessageService extends JpaRepository<ChatMessage, String>{
 
     @Query("from ChatMessage where toMobile=?1")
     List<ChatMessage> getAllMessageForGroup(String groupName);
+    
+    @Query("from ChatMessage where (fromMobile=?1 AND toMobile=?2) AND (seenOrNot=?3 OR seenOrNot=?4)")
+    List<ChatMessage> getAllChatMessages(String fromMobile, String toMobile,String seen,String seen2);
+
+    @Query("select fromMobile from ChatMessage where toMobile=?1 AND seenOrNot=?2")
+    List<String> getAllUnSeenMessagesForUser(String mobile,String status);
+
 
 }

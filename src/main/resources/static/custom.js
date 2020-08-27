@@ -38,14 +38,17 @@ function render(message, userName) {
 
 function sendMessage(message) {
     let username = $('#mobilenum').text();
-    sendMsg(username, message);
+    let chatId = Date.now()*6747 
+    sendMsg(username, message,chatId);
     scrollToBottom();
     if (message.trim() !== '') {
         var template = Handlebars.compile($("#message-template").html());
         var context = {
             messageOutput: message,
             time: getCurrentTime(),
-            toUserName: selectedUser
+            toUserName: selectedUser,
+            messageid:chatId,
+            read:'send'
         };
         $chatHistoryList.append(template(context));
         scrollToBottom();

@@ -1,30 +1,31 @@
 package com.model;
 
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
 @Entity
 public class ChatMessage {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String id;
     private String message;
     private String fromMobile;
     private String toMobile;
     private String date;
+    private String seenOrNot;
+    
     public ChatMessage() {
         super();
         // TODO Auto-generated constructor stub
     }
-    public ChatMessage(String message, String fromMobile, String toMobile, String date) {
+    public ChatMessage(String id,String seenOrNot,String message, String fromMobile, String toMobile, String date) {
         super();
+        this.id=id;
         this.message = message;
         this.fromMobile = fromMobile;
         this.toMobile = toMobile;
         this.date = date;
+        this.seenOrNot = seenOrNot;
     }
     public String getId() {
         return id;
@@ -55,6 +56,12 @@ public class ChatMessage {
     }
     public void setDate(String date) {
         this.date = date;
+    }
+    public String getSeenOrNot() {
+        return seenOrNot;
+    }
+    public void setSeenOrNot(String seenOrNot) {
+        this.seenOrNot = seenOrNot;
     }
     
     

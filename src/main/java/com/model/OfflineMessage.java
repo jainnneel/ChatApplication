@@ -1,16 +1,13 @@
 package com.model;
 
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
 @Entity
 public class OfflineMessage {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private String id;
     private String message;
     private String fromMobile;
     private String toMobile;
@@ -19,17 +16,18 @@ public class OfflineMessage {
         super();
         // TODO Auto-generated constructor stub
     }
-    public OfflineMessage(String message, String fromMobile, String toMobile, String date) {
+    public OfflineMessage(String id,String message, String fromMobile, String toMobile, String date) {
         super();
+        this.id=id;
         this.message = message;
         this.fromMobile = fromMobile;
         this.toMobile = toMobile;
         this.date = date;
     }
-    public int getId() {
+    public String getId() {
         return id;
     }
-    public void setId(int id) {
+    public void setId(String id) {
         this.id = id;
     }
     public String getMessage() {
