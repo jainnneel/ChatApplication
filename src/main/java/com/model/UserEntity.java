@@ -10,6 +10,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToMany;
+import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -33,6 +34,9 @@ public class UserEntity implements Serializable {
     @ManyToMany(mappedBy = "entities",fetch = FetchType.LAZY)
     @JsonIgnore
     private List<GroupChat> groupChat;
+    
+    @OneToMany(mappedBy = "admin")
+    private List<GroupChat> groupadmin;
     
     @Transient
     private String status;

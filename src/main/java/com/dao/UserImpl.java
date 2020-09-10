@@ -39,19 +39,25 @@ public class UserImpl implements UserDetailsService {
         return entity;
     }
     
-    public void addUserToGroup(UserEntity entity, GroupChat groupChat) {
+    public String addUserToGroup(UserEntity entity, GroupChat groupChat) {
         try {
             List<GroupChat> chats = groupImpl.getGroupListByUserEntity(entity);
+            if(chats.contains(groupChat)) {
+                return "You are already member of group";
+            }else {
             chats.add(groupChat);
             List<UserEntity> entities = getAllUserInGroup(groupChat.getGid());
             entities.add(entity);
             groupChat.setEntities(entities);
             entity.setGroupChat(chats);
             userRepo.save(entity);
+                return "done";
+            }
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+        return null;
     }
     
     public List<UserEntity> getAllUserInGroup(int groupId){
@@ -63,4 +69,28 @@ public class UserImpl implements UserDetailsService {
         }
         return entities;
     }
+
+    public UserEntity getUserByMobile(int id) {
+        UserEntity entity = null ;
+        try {
+            entity = userRepo.findById(id).get();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return entity;
+    }
+    
+    
+
+//    public void addingUserListToGroup(List<UserEntity> entities, GroupChat groupchat) {
+//        try {
+//            for(UserEntity entity:entities) {
+//                addUserToGroup(entity,groupchat);
+//            }
+//        } catch (Exception e) {
+//            // TODO Auto-generated catch block
+//            e.printStackTrace();
+//        }
+//    }
 }

@@ -14,6 +14,7 @@ import com.dao.AddingImpl;
 import com.dao.ChastMessageImpl;
 import com.dao.GroupChatImpl;
 import com.dao.OfflineMessageImpl;
+import com.dao.OfflineNotiImpl;
 import com.dao.UserImpl;
 import com.model.ChatMessage;
 import com.model.GroupChat;
@@ -44,11 +45,12 @@ public class MessageController {
     @Autowired
     private GroupChatImpl groupImpl;
     
+    @Autowired
+    private OfflineNotiImpl offlineNotiImpl;
+    
     @MessageMapping("/chat/{to}")
     public void sendMessage(@DestinationVariable String to,@Payload MessageModel messageModel) {
         UserEntity userByMobile = userImpl.getUserByMobile(to);
-        
-        
         if(WebSocketSessionListener.getConnectedClientId().contains(to.trim())==true) {
 
             if(userByMobile!=null) {
@@ -105,14 +107,18 @@ public class MessageController {
     public void userOnline(@Payload UserEntity entity,SimpMessageHeaderAccessor headerAccessor ) {
         WebSocketSessionListener.setConnectedClientId(entity.getMobile());
         List<UserEntity> userList = addingImpl.getAllUserAddedByUser(entity.getMobile());
-        
+        boolean noti = offlineNotiImpl.getnotification(entity.getMobile().trim()); 
         List<String> userMobile = chatimpl.getAllUnSeenMessagesForUser(entity.getMobile());
         
-//        List<String> mobileList = offlineService.getAllUserInformation(entity.getMobile());
+//      List<String> mobileList = offlineService.getAllUserInformation(entity.getMobile());
         for(UserEntity u:userList) {
+            System.out.println(u.getMobile());
             simpMessagingTemplate.convertAndSend("/topic/status/"+u.getMobile(),new OnlineStatus(entity.getMobile(),"online"));
         }
-        simpMessagingTemplate.convertAndSend("/topic/offlineMessage/"+entity.getMobile(),userMobile);
+        simpMessagingTemplate.convertAndSend("/topic/offlineMessage/"+entity.getMobile(),userMobile);   
+        if(noti) {
+        simpMessagingTemplate.convertAndSend("/topic/notimessages/"+entity.getMobile(),noti);
+        }
         headerAccessor.getSessionAttributes().put("username", entity.getMobile());
     }
     

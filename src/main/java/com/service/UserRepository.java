@@ -16,4 +16,5 @@ public interface UserRepository extends JpaRepository<UserEntity,Integer> {
     @Query(value = "select userentity from UserEntity userentity JOIN userentity.groupChat gc where gc.id=?1")
     List<UserEntity> getAllUserInGroup(int groupChat);
 
+
 }

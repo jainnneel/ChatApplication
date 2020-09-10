@@ -4,6 +4,7 @@
 	xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
 <head>
 <meta charset="ISO-8859-1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Insert title here</title>
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script
@@ -33,7 +34,12 @@
 	<h2 th:text="${user.name}"></h2>
 	<h2 th:text="${user.mobile}" id="mobilenum"></h2>
 	<button onclick="addUser()" id="addButton">ADD Mobile</button>
-	<button onclick="addGroup()" id="addButton">ADD Group</button>
+	<button onclick="addGroup()" id="addButton">Join Group</button>
+	<button onclick="createGroup()" id="addButton">Create Group</button>
+	<button id="show_noti" onclick="showNoti()" >Show Notification</button><span id="new_notification" class="hide">*</span>
+	<button id="addmem" onclick="addmemtogroups()">Add member to group</button>
+	<br>
+	<br>
 	<div id="adderform" class="hide">
 		<form th:action="adduser" id="addForm">
 			Add Mobile: <input type="text" id="mobile">
@@ -42,10 +48,42 @@
 	</div>
 	<div id="addergroup" class="hide">
 		<form th:action="addgroup" id="addgroup">
-			Add Group: <input type="text" id="group">
+			Join Group: <input type="text" id="group">
 			<button type="submit">ADD</button>
 		</form>
 	</div>
+	
+	<div id="createGroup" class="hide">
+		<form th:action="createGroup" id="createGroupForm">
+			Name : <input type="text" id="ngroup"><br>
+			Type : <input type="radio" class="gtype" value="public" name="gtype">Public
+			       <input type="radio" class="gtype" value="private" name="gtype">Private	
+			<br>
+			Add Member: 
+			<div id="groupmem" >
+				
+			</div>        
+			<button type="submit">Create</button>
+		</form>
+	</div>
+	<div>
+	
+	<ul id="noti_list" class="hide">
+		
+	</ul>
+	</div>
+	<div id="addmembers" class="hide">
+		<form th:action="addmembers" id="addMemberForm">
+			<div id="optional" >
+			</div>
+			<div id="addgroupmem" >
+			</div>
+			<button type="submit">ADD</button>
+			
+		</form>
+		
+	</div>
+	<br>
 	<div>
 		<div class="container clearfix">
 			<div class="people-list" id="people-list">
@@ -143,7 +181,8 @@ function connectToChat(userName) {
     stompClient = Stomp.over(socket);
     stompClient.connect({}, function (frame) {
     	console.log("connected to: " + frame);
-        stompClient.subscribe("/topic/messages/" + userName, function (response) {
+        
+    	stompClient.subscribe("/topic/messages/" + userName, function (response) {
         	let data = JSON.parse(response.body);
       	    if (selectedUser == data.fromLogin) {
       	    	render(data.message, data.fromLogin);
@@ -203,20 +242,28 @@ function connectToChat(userName) {
         	$('#messages_'+data.chatId).hide();
         }); 
         
+        stompClient.subscribe("/topic/notimessages/" + userName, function (response) {
+        	document.getElementById('new_notification').classList.remove('hide');
+        }); 
+        
+        stompClient.subscribe("/topic/notimessage/" + userName, function (response) {
+        	document.getElementById('new_notification').classList.remove('hide');
+        	getAllUserAddedByUser();
+        	setTimeout(function(){
+			getAllGroupAddedByUser();
+		}, 500); 
+        }); 
     });
 }
 
 
 var connectChannel = (function(){
 	  let wasCalled = false;
-	  console.log(wasCalled)
 	  return function(){
 	    if(wasCalled){
-	    	console.log('iff')
 	      return;
 	    }
 	    else {
-	    	console.log('else')
 	    	 connectToChat($('#mobilenum').text());
 	      wasCalled = true;
 	    }
@@ -379,11 +426,12 @@ function selectUser(userName,name) {
     } */
     $('#selectedUserId').html('');
     $('#selectedUserId').append('Chat with ' + name);
-    $('#newmessageNotify_'+selectedUser).hide();
+    console.log('#newmessageNotify_'+selectedUser)
     $('#oflineMessage_'+selectedUser).hide();
    /*  sendDeleteOfflineMessages([[${user.mobile}]],userName); */
     console.log($('#newmessageNotify_'+selectedUser).text())
     if($('#newmessageNotify_'+selectedUser).text().includes('+1')){
+        $('#newmessageNotify_'+selectedUser).html('');
    	 sendreadNotification(selectedUser,[[${user.mobile}]]);
     }
     scrollToBottom();
@@ -413,10 +461,11 @@ const getAllGroupAddedByUser = () => {
 		data : JSON.stringify([[${user.mobile}]]),
 		dataType : 'json',
 		success : function(data) {
+			listOfGroup=[]
 			for(var i = 0;i<data.length;i++){
-				listOfGroup.push(data[i])
-/* 		    		 $('#usersList').append(`<a href=# onclick=selectGroup('${data[i].groupName}')><li id=newmessage_${data[i].groupName}>${data[i].groupName}(Group)</li></a>`) 
- */			}  
+				listOfGroup.push(data[i]) 
+			}
+				 dislpayGroupList()
 		}
 	   });
 }
@@ -430,54 +479,45 @@ const getAllUserAddedByUser = () => {
 			dataType : 'json',
 			success : function(data) {
 				$('#usersList').html('');
+				listOfUser=[]
+				console.log(listOfUser+"fsfsdffsfds")
 				for(var i = 0;i<data.length;i++){
-					console.log(listOfUser.push(data[i]))
-/* 					$('#usersList').append(`<a href=# onclick=selectUser('${data[i].mobile}') ><li id=newmessage_${data[i].mobile} >${data[i].name}<span  id=online_${data[i].mobile}>${data[i].status}</span></li></a>`)
- */				} 
+					listOfUser.push(data[i])
+ 				}
+ 			           dislpayUserList()
 			}
 		   });
 	    }
 
-var getUser = (function(){
-	  var wasCalled = false;
-	  return function(){
-	    if(wasCalled){
-	      return;
-	    }
-	    else {
-	      wasCalled = true;
-	    }
-	    getAllUserAddedByUser();
-	    getAllGroupAddedByUser();
-	  
-	  };
-	})();
-getUser();
-
-setTimeout(function(){
-	 console.log(listOfUser.length)
-	 dislpayUserList()
-	 dislpayGroupList()
- 	}, 500);
-
- function dislpayUserList(){
+function dislpayUserList(){
 	 for(var i=0;i<listOfUser.length;i++){
 		 $('#usersList').append(`<a href=# onclick=selectUser('${listOfUser[i].mobile}','${listOfUser[i].name}') ><li id=newmessage_${listOfUser[i].mobile} >${listOfUser[i].name}<span  id=online_${listOfUser[i].mobile}>${listOfUser[i].status}</span></li></a>`)
 	 }
  }
 
- function dislpayGroupList(){
+function dislpayGroupList(){
 	 for(var i=0;i<listOfGroup.length;i++){
-	 	$('#usersList').append(`<a href=# onclick=selectGroup('${listOfGroup[i].groupName}')><li id=newmessage_${listOfGroup[i].groupName}>${listOfGroup[i].groupName}(Group)</li></a>`) 
+		 $('#usersList').append(`<a href=# onclick=selectGroup('${listOfGroup[i].groupName}')><li id=newmessage_${listOfGroup[i].groupName}>${listOfGroup[i].groupName}(Group)</li></a>`) 
 	 }
  }
+
+getAllUserAddedByUser();
+setTimeout(function(){
+	getAllGroupAddedByUser();
+}, 500); 
 
 	var i =0;
 	const addUser = () => {
 		if(i==0){
 			document.getElementById('adderform').classList.remove('hide');
 			document.getElementById('addergroup').classList.add('hide');
+			document.getElementById('createGroup').classList.add('hide');
+			document.getElementById('addmembers').classList.add('hide');
 			i=1;
+			l=0;
+			k=0;
+			j=0;
+			m=0;
 		}else{
 			document.getElementById('adderform').classList.add('hide');
 			i=0;
@@ -488,12 +528,146 @@ setTimeout(function(){
 		if(j==0){
 			document.getElementById('addergroup').classList.remove('hide');
 			document.getElementById('adderform').classList.add('hide');
+			document.getElementById('createGroup').classList.add('hide');
+			document.getElementById('addmembers').classList.add('hide');
+			i=0;
+			l=0;
+			k=0;
 			j=1;
+			m=0;
 		}else{
 			document.getElementById('addergroup').classList.add('hide');
 			j=0;
 		    }
 		}
+	var k =0;
+	const showNoti = () => {
+		if(k==0){
+			document.getElementById('noti_list').classList.remove('hide');
+			document.getElementById('createGroup').classList.add('hide');
+			document.getElementById('addmembers').classList.add('hide');
+			document.getElementById('show_noti').innerHTML='Hide Notification';
+			i=0;
+			l=0;
+			k=1;
+			j=0;
+			m=0;
+			document.getElementById('new_notification').classList.add('hide');
+			getNotification();
+		}else{
+			document.getElementById('noti_list').classList.add('hide');
+			document.getElementById('show_noti').innerHTML='Show Notification';
+			k=0;
+		    }
+		}
+	var l =0;
+	const createGroup = () => {
+		if(l==0){
+			document.getElementById('createGroup').classList.remove('hide');
+			document.getElementById('adderform').classList.add('hide');
+			document.getElementById('addergroup').classList.add('hide');
+			document.getElementById('noti_list').classList.add('hide');
+			document.getElementById('addmembers').classList.add('hide');
+			document.getElementById('show_noti').innerHTML='Show Notification';
+			i=0;
+			k=0;
+			j=0;
+			m=0;
+			let userChecklist = document.getElementById('groupmem');
+			console.log(listOfUser)
+			$('#groupmem').html('')
+			for(var i=0;i<listOfUser.length;i++){
+				$('#groupmem').append(`<input type=checkbox  id=${listOfUser[i].id}  class=userlist  name=selector[]  value=${listOfUser[i].id}/> <label for=m1>${listOfUser[i].name}</label><br>`)			
+			}
+			l=1;
+		}else{
+			document.getElementById('createGroup').classList.add('hide');
+			l=0;
+		    }
+		}
+	var m =0;
+	const addmemtogroups = () => {
+		if(m==0){
+			document.getElementById('addmembers').classList.remove('hide');
+			document.getElementById('adderform').classList.add('hide');
+			document.getElementById('addergroup').classList.add('hide');
+			document.getElementById('noti_list').classList.add('hide');
+			document.getElementById('show_noti').innerHTML='Show Notification';
+			i=0;
+			l=0;
+			k=0;
+			j=0;
+			let userChecklist = document.getElementById('groupmem');
+			console.log(listOfGroup)
+			
+			getGroupsOfUserAdminAndPublic()
+			}else{
+				document.getElementById('addmembers').classList.add('hide');
+				m=0;
+		   	 }
+				
+			}
+	
+	const getGroupsOfUserAdminAndPublic = () => {
+		$.ajax({
+  			type : "POST",
+  			contentType : "application/json",
+  			url :  "getGroupsOfUserAdminAndPublic",
+  			data : JSON.stringify([[${user.mobile}]]),
+  			dataType : 'json',
+  			success : function(response) {
+  				$('#optional').html('')
+  				let html='';
+  					response.data.forEach((groupName) => {
+  			 		       html += `<option value=${groupName.groupName} >${groupName.groupName}</option>`;
+  					 })
+  			 			$('#optional').html(`Select Group:<select id=userGroups onchange=getUserListNotMember()>
+  			 				<option disabled=disabled id=optional selected=selected>--select--</option> ${html}
+  			 					</select>` )
+  						m=1;
+  				 }
+  		   });
+	}
+	
+	const getNotification = () => {
+		$.ajax({
+  			type : "POST",
+  			contentType : "application/json",
+  			url :  "getNotification",
+  			data : JSON.stringify([[${user.mobile}]]),
+  			dataType : 'json',
+  			success : function(response) {
+  				$('#noti_list').html('')
+  			 	for(var i=0;i<response.data.length;i++){
+  			 		console.log(response.data)
+  			 		if(response.data[i].type=='req'){
+  						$('#noti_list').append(`<li> <h4>Request from ${response.data[i].fromMobile}</h4><button onclick=confirmreq(${response.data[i].fromMobile})>Confirm</button><button onclick=deniedreq(${response.data[i].fromMobile})>Denied</button></li>`)
+  			 		}else{
+  			 			$('#noti_list').append(`<li> <h4>Your request has been accepted by ${response.data[i].fromMobile}</h4><button onclick=deletenotification(${response.data[i].nid})>cancel</button></li>`)
+  			 		}  				 
+  			 	}
+  			 }
+  		   });
+	}
+	
+	const getUserListNotMember = () => {
+		$.ajax({
+  			type : "POST",
+  			contentType : "application/json",
+  			url :  "getUserListNotMember",
+  			data : JSON.stringify($('#userGroups').val()),
+  			dataType : 'json',
+  			success : function(response) {
+				  if(response.status=='done'){
+					  console.log(response.data)						  
+					  $('#addgroupmem').html('Add:')
+						for(var i=0;i<response.data.length;i++){
+						  $('#addgroupmem').append(`<input type=checkbox  id=${response.data[i].id}  class=useraddlist  name=selector[]  value=${response.data[i].id}/> <label>${response.data[i].name}</label><br>`)			
+						}  
+				  }			 	
+  			 }
+  		   });
+	}
 	
 	$('#addForm').submit(function(event){
 		event.preventDefault();
@@ -504,12 +678,9 @@ setTimeout(function(){
   			data : JSON.stringify($('#mobile').val()),
   			dataType : 'json',
   			success : function(data) {
+  				$('#mobile').val('')
   				if(data.status=="done"){
-  					$('#mobile').val('');
-  					getAllUserAddedByUser();
-  					setTimeout(function(){
-  						 getAllGroupAddedByUser();
-  					 },500);
+  					alert('request has been send')
   				}else if(data.status=="not exists"){
   					alert("not exists")
   				}else if(data.status=="alreadyAdded"){
@@ -517,6 +688,7 @@ setTimeout(function(){
   				}else{
   					alert("try again")
   				}
+  				$('#addForm').trigger("reset");  
   			}
   		   });
 		})
@@ -535,9 +707,74 @@ setTimeout(function(){
   					 getAllGroupAddedByUser();
   				 },500);
   				 getAllUserAddedByUser();
+  				$('#addgroup').trigger("reset");  
+  				 alert(data.status)
   			}
   		   });
 		})
+		
+	$('#addMemberForm').submit(function(event){
+		event.preventDefault();
+		var checkboxValues = [];
+		$('input.useraddlist:checked').map(function() {
+		            checkboxValues.push($(this).val());
+		});
+		const formdata = {
+			entities:checkboxValues,
+			groupName:$('#userGroups').val(),
+		} 
+		console.log(formdata)
+		$.ajax({
+  			type : "POST",
+  			contentType : "application/json",
+  			url :  "addmemgroup",
+  			data : JSON.stringify(formdata),
+  			dataType : 'json',
+  			success : function(data) {
+  				$('#group').val('');
+  				setTimeout(function(){
+  					 getAllGroupAddedByUser();
+  				 },500);
+  				 getAllUserAddedByUser();
+  				 $('#addMemberForm').trigger("reset");  
+  				 alert(data.status)
+  			}
+  		   });
+		})
+			
+	$('#createGroupForm').submit(function(event){
+		event.preventDefault();
+		var checkboxValues = [];
+		$('input.userlist:checked').map(function() {
+		            checkboxValues.push($(this).val());
+		});
+		console.log(checkboxValues);
+		const formdata = {
+			entities:checkboxValues,
+			groupName:$('#ngroup').val(),
+			typeOfGroup:$('.gtype:checked').val()
+		} 
+		console.log(formdata)
+		$.ajax({
+  			type : "POST",
+  			contentType : "application/json",
+  			url :  "createGroupForm",
+  			data : JSON.stringify(formdata),
+  			dataType : 'json',
+  			success : function(data) {
+			   if(data.status=='done'){
+				   getAllUserAddedByUser();
+		        	   setTimeout(function(){
+					getAllGroupAddedByUser();
+				   }, 500);
+		        	   $('#createGroupForm').trigger("reset");  
+		        	alert('group successfully created')   
+			   }else{
+				   alert(data.status)
+			   }
+  			}
+  		   });
+		})	
 	
 	const  deletemessage = (messageid) => {
 		if (confirm("Are you sure?")) {
@@ -557,10 +794,64 @@ setTimeout(function(){
 	  			}
 	  		   })	
 			} 
-		}	
-	 	
+		}
 	
-		
+	const confirmreq = (toMobile) => {
+		$.ajax({
+  			type : "POST",
+  			contentType : "application/json",
+  			url :  "addUseToContact",
+  			data : JSON.stringify(toMobile),
+  			dataType : 'json',
+  			success : function(data) {
+  				if(data.status=="added"){
+  					getAllUserAddedByUser();
+  					setTimeout(function(){
+  						getAllGroupAddedByUser();
+  					}, 500); 
+  					getNotification()
+  					console.log('done');
+  				}else{
+  					alert("try again")
+  				}
+  			}
+  		   })	
+	}
+	
+	const deniedreq = (toMobile) => {
+		console.log(toMobile)
+		$.ajax({
+  			type : "POST",
+  			contentType : "application/json",
+  			url :  "deniedrequest",
+  			data : JSON.stringify(toMobile),
+  			dataType : 'json',
+  			success : function(data) {
+  				if(data.status=="done"){
+  					getNotification()
+  				}else{
+  					alert("try again")
+  				}
+  			}
+  		   })	
+	}
+	
+	const deletenotification = (nid) => {
+		$.ajax({
+  			type : "POST",
+  			contentType : "application/json",
+  			url :  "deleteNotification",
+  			data : JSON.stringify(nid),
+  			dataType : 'json',
+  			success : function(data) {
+  				if(data.status=="done"){
+  					getNotification()
+  				}else{
+  					alert("try again")
+  				}
+  			}
+  		   })	
+	}
 </script>
 
 </html>

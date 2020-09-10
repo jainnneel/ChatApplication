@@ -39,9 +39,9 @@ function render(message, userName) {
 function sendMessage(message) {
     let username = $('#mobilenum').text();
     let chatId = Date.now()*6747 
+    if (message.trim() !== '') {
     sendMsg(username, message,chatId);
     scrollToBottom();
-    if (message.trim() !== '') {
         var template = Handlebars.compile($("#message-template").html());
         var context = {
             messageOutput: message,
