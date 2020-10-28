@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -29,7 +30,9 @@ public class UserImpl implements UserDetailsService {
         return new User(entity.getMobile(), entity.getPass(), entity.isEnable(), true, true, true, new ArrayList<>());
     }
     
+    @Cacheable(value = "usersCache" , key = "#p0")
     public UserEntity getUserByMobile(String mobile) {
+        System.out.println("grtting userRepo by its mobile number");
         UserEntity entity=null;
         try {
             entity =userRepo.findByMobile(mobile);
@@ -39,19 +42,27 @@ public class UserImpl implements UserDetailsService {
         return entity;
     }
     
-    public void addUserToGroup(UserEntity entity, GroupChat groupChat) {
+    public String addUserToGroup(UserEntity entity, GroupChat groupChat) {
         try {
-            List<GroupChat> chats = groupImpl.getGroupListByUserEntity(entity);
-            chats.add(groupChat);
-            List<UserEntity> entities = getAllUserInGroup(groupChat.getGid());
-            entities.add(entity);
-            groupChat.setEntities(entities);
-            entity.setGroupChat(chats);
-            userRepo.save(entity);
+            List<GroupChat> chats = entity.getGroupChat();
+//                    groupImpl.getGroupListByUserEntity(entity);
+            if(chats.contains(groupChat)) {
+                return "You are already member of group";
+            }else {
+                System.out.println(groupChat.getEntities());
+                chats.add(groupChat);
+//                List<UserEntity> entities = getAllUserInGroup(groupChat.getGid());
+//                entities.add(entity);
+//                groupChat.setEntities(entities);
+                entity.setGroupChat(chats);
+                userRepo.save(entity);
+                    return "done";
+            }
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+        return null;
     }
     
     public List<UserEntity> getAllUserInGroup(int groupId){
@@ -63,4 +74,29 @@ public class UserImpl implements UserDetailsService {
         }
         return entities;
     }
+    
+    @Cacheable(value = "usersCache" , key = "#p1")
+    public UserEntity getUserByMobile(int id) {
+        System.out.println("getting user by its id");
+        UserEntity entity = null ;
+        try {
+            entity = userRepo.findById(id).get();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return entity;
+    }
+    
+
+//    public void addingUserListToGroup(List<UserEntity> entities, GroupChat groupchat) {
+//        try {
+//            for(UserEntity entity:entities) {
+//                addUserToGroup(entity,groupchat);
+//            }
+//        } catch (Exception e) {
+//            // TODO Auto-generated catch block
+//            e.printStackTrace();
+//        }
+//    }
 }
