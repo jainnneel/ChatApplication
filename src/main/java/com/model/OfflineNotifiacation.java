@@ -15,18 +15,21 @@ public class OfflineNotifiacation {
     private String tofromMobile;
     private String fromMobile;
     private String type;
+    private boolean seenOrNot;
+    
     
     public OfflineNotifiacation() {
         super();
         // TODO Auto-generated constructor stub
     }
 
-    public OfflineNotifiacation(String message, String tofromMobile, String fromMobile,String type) {
+    public OfflineNotifiacation(String message, String tofromMobile, String fromMobile,String type,boolean seenOrNot) {
         super();
         this.message = message;
         this.tofromMobile = tofromMobile;
         this.fromMobile = fromMobile;
         this.type=type;
+        this.seenOrNot=seenOrNot;
     }
 
     public int getNid() {
@@ -61,14 +64,20 @@ public class OfflineNotifiacation {
         this.fromMobile = fromMobile;
     }
     
-    
-
     public String getType() {
         return type;
     }
 
     public void setType(String type) {
         this.type = type;
+    }
+    
+    public boolean getSeenOrNot() {
+        return seenOrNot;
+    }
+
+    public void setSeenOrNot(boolean seenOrNot) {
+        this.seenOrNot = seenOrNot;
     }
 
     @Override

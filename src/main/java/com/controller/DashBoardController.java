@@ -1,6 +1,7 @@
 package com.controller;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 import org.modelmapper.ModelMapper;
@@ -11,6 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -26,6 +28,7 @@ import com.model.GroupChat;
 import com.model.GroupCreateRequest;
 import com.model.MessageModel;
 import com.model.OfflineNotifiacation;
+import com.model.Requestdata;
 import com.model.ResponseEntity;
 import com.model.UserAdded;
 import com.model.UserEntity;
@@ -73,10 +76,10 @@ public class DashBoardController {
             } else {
                 if(WebSocketSessionListener.getConnectedClientId().contains(mobile.toString().trim())==true) {
                     simpMessagingTemplate.convertAndSend("/topic/notimessages/"+mobile.toString(),new MessageModel());
-                    offlineNotiImpl.createOfflineMessage(new OfflineNotifiacation("adding req",mobile.toString(),addedByUser.getMobile(),"req"));
+                    offlineNotiImpl.createOfflineMessage(new OfflineNotifiacation(addedByUser.getName()+" ( "+addedByUser.getMobile()+" ) "+"send request",mobile.toString(),addedByUser.getMobile(),"req",false));
                     return new ResponseEntity("done", null);
                 }else {
-                    offlineNotiImpl.createOfflineMessage(new OfflineNotifiacation("adding req",mobile.toString(),addedByUser.getMobile(),"req"));
+                    offlineNotiImpl.createOfflineMessage(new OfflineNotifiacation(addedByUser.getName()+"("+addedByUser.getMobile()+")"+"send request",mobile.toString(),addedByUser.getMobile(),"req",false));
                     return new ResponseEntity("done", null);
                 }
             }
@@ -93,7 +96,7 @@ public class DashBoardController {
         addingImpl.createUser(new UserAdded(addedByUser, addedUser));
         addingImpl.createUser(new UserAdded(addedUser, addedByUser));
         offlineNotiImpl.deleteNotificationForUser(addedUser.getMobile().trim(),addedByUser.getMobile().trim());
-        offlineNotiImpl.createOfflineMessage(new OfflineNotifiacation("req accept",mobile.toString(),addedByUser.getMobile(),"acce"));
+        offlineNotiImpl.createOfflineMessage(new OfflineNotifiacation(addedByUser.getName()+" ( "+addedByUser.getMobile()+" ) "+"accept your request",mobile.toString(),addedByUser.getMobile(),"acce",false));
         simpMessagingTemplate.convertAndSend("/topic/notimessage/"+mobile.toString(),addedByUser);
         return new ResponseEntity("added", null);
     }
@@ -196,11 +199,15 @@ public class DashBoardController {
     
     @RequestMapping(value = "addmemgroup",consumes = MediaType.ALL_VALUE,method = RequestMethod.POST)
     @ResponseBody
-    public ResponseEntity addmemgroup(@RequestBody GroupCreateRequest group){
+    public ResponseEntity addmemgroup(@RequestBody GroupCreateRequest group,@AuthenticationPrincipal UserDetails details){
         GroupChat groupChat = groupChatImpl.getGroupByName(group.getGroupName());
         if(groupChat!=null) {
+            UserEntity userEntity = userImpl.getUserByMobile(details.getUsername());
             for(String entity:group.getEntities()) {
-                 userImpl.addUserToGroup(userImpl.getUserByMobile(Integer.parseInt(entity.split("/")[0])),groupChat);
+                UserEntity addedUser = userImpl.getUserByMobile(Integer.parseInt(entity.split("/")[0]));
+                 groupChatImpl.addUserToGroup(userImpl.getUserByMobile(Integer.parseInt(entity.split("/")[0])),groupChat);
+                 offlineNotiImpl.createOfflineMessage(new OfflineNotifiacation("added in group "+group.getGroupName() + " By "+userEntity.getName(),addedUser.getMobile(),details.getUsername().toString(),"add",false));
+                 simpMessagingTemplate.convertAndSend("/topic/notimessage/"+addedUser.getMobile(),"done");
             }
                 return new ResponseEntity("done",null);
         }else {
@@ -211,16 +218,18 @@ public class DashBoardController {
     @RequestMapping(value = "createGroupForm",consumes = MediaType.ALL_VALUE,method = RequestMethod.POST)
     @ResponseBody
     public ResponseEntity createGroupForm(@RequestBody GroupCreateRequest group, @AuthenticationPrincipal UserDetails details){
-        GroupChat chat =  groupChatImpl.getGroupByName(group.getGroupName());
+        GroupChat chat =  groupChatImpl.getGroupByName(group.getGroupName().trim());
         if(chat!=null) {
             return new ResponseEntity("Group name must be unique", null);
         }else {
         UserEntity userEntity = userImpl.getUserByMobile(details.getUsername());
         ModelMapper mapper = new ModelMapper();
-        List<UserEntity> entities = new ArrayList<>();
+        List<UserEntity> entities = new  ArrayList<>();
         for(String id:group.getEntities()) {
-            System.out.println(id.split("/")[0]);
-            entities.add(userImpl.getUserByMobile(Integer.parseInt(id.split("/")[0])));
+            UserEntity addedUser = userImpl.getUserByMobile(Integer.parseInt(id.split("/")[0]));
+            entities.add(addedUser);
+            offlineNotiImpl.createOfflineMessage(new OfflineNotifiacation("added in group "+group.getGroupName() + " By "+userEntity.getName(),addedUser.getMobile(),details.getUsername().toString(),"add",false));
+            simpMessagingTemplate.convertAndSend("/topic/notimessage/"+addedUser.getMobile(),"done");
         }
         entities.add(userEntity);
         System.out.println(entities);
@@ -236,7 +245,38 @@ public class DashBoardController {
     @RequestMapping(value = "getGroupsOfUserAdminAndPublic",consumes = MediaType.ALL_VALUE,method = RequestMethod.POST)
     @ResponseBody
     public ResponseEntity getGroupsOfUserAdminAndPublic(@RequestBody Object mobile){
-        List<GroupChat> chats = groupChatImpl.getGroupsOfUserAdminAndPublic(mobile);
+        HashSet<GroupChat> chats = groupChatImpl.getGroupsOfUserAdminAndPublic(mobile);
         return new ResponseEntity("done",chats);
     }
+    
+    @RequestMapping(value = "showgrouplist",consumes = MediaType.ALL_VALUE,method = RequestMethod.POST)
+    @ResponseBody
+    public ResponseEntity showgrouplist(@RequestBody Object gid){
+        return new ResponseEntity("done",userImpl.getAllUserInGroup(Integer.parseInt(gid.toString().trim())),groupChatImpl.getAdminByGroupId(gid.toString()).getMobile());
+    }
+    
+    @RequestMapping(value = "removeuser",consumes = MediaType.ALL_VALUE,method = RequestMethod.POST)
+    @ResponseBody
+    public ResponseEntity removeuser(@RequestBody Object gid,@AuthenticationPrincipal UserDetails details){
+        return new ResponseEntity("done",addingImpl.removeuserfromdata(userImpl.getUserByMobile(Integer.parseInt(gid.toString().trim())),userImpl.getUserByMobile(details.getUsername())));
+    }
+    
+    @RequestMapping(value = "groupleft",consumes = MediaType.ALL_VALUE,method = RequestMethod.POST)
+    @ResponseBody
+    public ResponseEntity groupleft(@RequestBody Object gid,@AuthenticationPrincipal UserDetails details){
+        groupChatImpl.removeuserfromgroup(userImpl.getUserByMobile(details.getUsername()), Integer.parseInt(gid.toString().trim()));    
+        return new ResponseEntity("done","");
+    }
+    
+    @RequestMapping(value = "removeuserfromgroup",consumes = MediaType.ALL_VALUE,method = RequestMethod.POST)
+    @ResponseBody
+    public ResponseEntity removeuserfromgroup(@RequestBody Requestdata rdata,@AuthenticationPrincipal UserDetails details){
+        if( groupChatImpl.getAdminByGroupId(rdata.getGid()).getMobile().equals(details.getUsername())) {
+            groupChatImpl.removeuserfromgroup( userImpl.getUserByMobile( Integer.parseInt(rdata.getUid())), Integer.parseInt(rdata.getGid()));
+            return new ResponseEntity("done",userImpl.getAllUserInGroup(Integer.parseInt(rdata.getGid().toString().trim())),rdata.getGid());
+        }else {
+            return new ResponseEntity("you are not authorize for it","");
+        }
+    }
+    
 }

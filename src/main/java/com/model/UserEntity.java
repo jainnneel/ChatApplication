@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.sql.Date;
 import java.util.List;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -31,7 +32,7 @@ public class UserEntity implements Serializable {
     private boolean isEnable;
     private Date dor;
     
-    @ManyToMany(mappedBy = "entities",fetch = FetchType.LAZY)
+    @ManyToMany(mappedBy = "entities",fetch = FetchType.LAZY,cascade = {CascadeType.REMOVE})
     @JsonIgnore
     private List<GroupChat> groupChat;
     

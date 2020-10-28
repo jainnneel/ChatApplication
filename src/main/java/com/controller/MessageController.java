@@ -137,4 +137,9 @@ public class MessageController {
         List<ChatMessage> setReadReciept = chatimpl.setReadReciept(chatMessage);
         simpMessagingTemplate.convertAndSend("/topic/readMessages/"+chatMessage.getFromMobile(),setReadReciept);
     }
+    
+    @MessageMapping("/chat/readMessageNoti")
+    public void readMessageNoti(@Payload ChatMessage chatMessage) {
+        offlineNotiImpl.setAllNotiOfUserSeen(chatMessage.getFromMobile());
+    }
 }

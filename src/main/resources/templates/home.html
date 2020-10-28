@@ -38,7 +38,8 @@
 	<button onclick="createGroup()" id="addButton">Create Group</button>
 	<button id="show_noti" onclick="showNoti()" >Show Notification</button><span id="new_notification" class="hide">*</span>
 	<button id="addmem" onclick="addmemtogroups()">Add member to group</button>
-	<br>
+	<button  id="removebtn" onclick="removeuser()">Remove</button>
+	
 	<br>
 	<div id="adderform" class="hide">
 		<form th:action="adduser" id="addForm">
@@ -59,7 +60,7 @@
 			Type : <input type="radio" class="gtype" value="public" name="gtype">Public
 			       <input type="radio" class="gtype" value="private" name="gtype">Private	
 			<br>
-			Add Member: 
+			Add Member: <br>
 			<div id="groupmem" >
 				
 			</div>        
@@ -67,7 +68,6 @@
 		</form>
 	</div>
 	<div>
-	
 	<ul id="noti_list" class="hide">
 		
 	</ul>
@@ -81,6 +81,12 @@
 			<button type="submit">ADD</button>
 			
 		</form>
+		
+	</div>
+	<div>
+		<ul id="removeuser" class="hide" >
+		
+		</ul>
 		
 	</div>
 	<br>
@@ -108,7 +114,11 @@
 					<i class="fa fa-star"></i>
 				</div>
 				<!-- end chat-header -->
-
+				<div>
+					<ul id="grouplist" class="hide">
+					
+					</ul>
+				</div>
 				<div class="chat-history">
 					<ul>
 
@@ -168,7 +178,7 @@
 </body>
 
 <script type="text/javascript">
-const url = 'http://192.168.0.109:8080';
+const url = 'http://localhost:8080';
 let stompClient;
 let selectedUser;
 let toMessage;
@@ -244,10 +254,12 @@ function connectToChat(userName) {
         
         stompClient.subscribe("/topic/notimessages/" + userName, function (response) {
         	document.getElementById('new_notification').classList.remove('hide');
+        	console.log($('#new_notification').hasClass('hide'))
         }); 
         
         stompClient.subscribe("/topic/notimessage/" + userName, function (response) {
         	document.getElementById('new_notification').classList.remove('hide');
+        	console.log($('#new_notification').hasClass('hide'))
         	getAllUserAddedByUser();
         	setTimeout(function(){
 			getAllGroupAddedByUser();
@@ -413,6 +425,11 @@ function sendreadNotification(sender,receiver){
 	    }));
 }
 
+function sendreadMessageNotification(sender){
+	stompClient.send("/app/chat/readMessageNoti", {}, JSON.stringify({
+		fromMobile:sender
+	    }));
+}
 
 function selectUser(userName,name) {
     toMessage=0;	
@@ -437,17 +454,20 @@ function selectUser(userName,name) {
     scrollToBottom();
     fecthmessages(userName);
 }
-function selectGroup(groupName) {
+function selectGroup(groupName,gid,admin) {
     toMessage=1;	
     console.log("selecting users: " + groupName);
     console.log('dsaddsa');
     selectedUser = groupName;
     $('#selectedUserId').html('');
-    $('#selectedUserId').append('Chat with ' + groupName);
+    $('#selectedUserId').append(`${groupName} <button id=userlistbut onclick=showgrouplist(${gid})>Show Members</button>  <button id=groupleft onclick=groupleft(${gid})>Exit group</button>`);
     $('#newmessageNotify_'+selectedUser).hide();
     $('#oflineMessage_'+selectedUser).hide();
    /*  sendDeleteOfflineGroupMessages([[${user.mobile}]],groupName); */
     fetchGroupChat(groupName)
+      n=0;
+	document.getElementById('userlistbut').innerHTML = 'Show Members';
+	document.getElementById('grouplist').classList.add('hide')
 }
 
 var listOfUser=[];
@@ -497,7 +517,7 @@ function dislpayUserList(){
 
 function dislpayGroupList(){
 	 for(var i=0;i<listOfGroup.length;i++){
-		 $('#usersList').append(`<a href=# onclick=selectGroup('${listOfGroup[i].groupName}')><li id=newmessage_${listOfGroup[i].groupName}>${listOfGroup[i].groupName}(Group)</li></a>`) 
+		 $('#usersList').append(`<a href=# onclick=selectGroup('${listOfGroup[i].groupName}','${listOfGroup[i].gid}','${listOfGroup[i].admin.mobile}')><li id=newmessage_${listOfGroup[i].groupName}>${listOfGroup[i].groupName}(Group)</li></a>`) 
 	 }
  }
 
@@ -513,11 +533,14 @@ setTimeout(function(){
 			document.getElementById('addergroup').classList.add('hide');
 			document.getElementById('createGroup').classList.add('hide');
 			document.getElementById('addmembers').classList.add('hide');
+			document.getElementById('removeuser').classList.add('hide');
+			document.getElementById('removebtn').innerHTML='Remove';
 			i=1;
 			l=0;
 			k=0;
 			j=0;
 			m=0;
+			o=0;
 		}else{
 			document.getElementById('adderform').classList.add('hide');
 			i=0;
@@ -530,11 +553,14 @@ setTimeout(function(){
 			document.getElementById('adderform').classList.add('hide');
 			document.getElementById('createGroup').classList.add('hide');
 			document.getElementById('addmembers').classList.add('hide');
+			document.getElementById('removeuser').classList.add('hide');
+			document.getElementById('removebtn').innerHTML='Remove';
 			i=0;
 			l=0;
 			k=0;
 			j=1;
 			m=0;
+			o=0;
 		}else{
 			document.getElementById('addergroup').classList.add('hide');
 			j=0;
@@ -547,13 +573,21 @@ setTimeout(function(){
 			document.getElementById('createGroup').classList.add('hide');
 			document.getElementById('addmembers').classList.add('hide');
 			document.getElementById('show_noti').innerHTML='Hide Notification';
+			document.getElementById('removeuser').classList.add('hide');
+			document.getElementById('removebtn').innerHTML='Remove';
+			document.getElementById('adderform').classList.add('hide');
 			i=0;
 			l=0;
 			k=1;
 			j=0;
 			m=0;
-			document.getElementById('new_notification').classList.add('hide');
+			o=0;
 			getNotification();
+			if(!$('#new_notification').hasClass('hide')){
+				sendreadMessageNotification([[${user.mobile}]])
+			}
+			document.getElementById('new_notification').classList.add('hide');
+				
 		}else{
 			document.getElementById('noti_list').classList.add('hide');
 			document.getElementById('show_noti').innerHTML='Show Notification';
@@ -569,10 +603,13 @@ setTimeout(function(){
 			document.getElementById('noti_list').classList.add('hide');
 			document.getElementById('addmembers').classList.add('hide');
 			document.getElementById('show_noti').innerHTML='Show Notification';
+			document.getElementById('removeuser').classList.add('hide');
+			document.getElementById('removebtn').innerHTML='Remove';
 			i=0;
 			k=0;
 			j=0;
 			m=0;
+			o=0;
 			let userChecklist = document.getElementById('groupmem');
 			console.log(listOfUser)
 			$('#groupmem').html('')
@@ -593,20 +630,49 @@ setTimeout(function(){
 			document.getElementById('addergroup').classList.add('hide');
 			document.getElementById('noti_list').classList.add('hide');
 			document.getElementById('show_noti').innerHTML='Show Notification';
+			document.getElementById('removeuser').classList.add('hide');
+			document.getElementById('removebtn').innerHTML='Remove';
 			i=0;
 			l=0;
 			k=0;
 			j=0;
+			o=0;
 			let userChecklist = document.getElementById('groupmem');
-			console.log(listOfGroup)
-			
 			getGroupsOfUserAdminAndPublic()
 			}else{
 				document.getElementById('addmembers').classList.add('hide');
 				m=0;
 		   	 }
-				
 			}
+	var o = 0;
+	const removeuser = () => {
+		if(o==0){
+			document.getElementById('addmembers').classList.add('hide');
+			document.getElementById('adderform').classList.add('hide');
+			document.getElementById('addergroup').classList.add('hide');
+			document.getElementById('noti_list').classList.add('hide');
+			document.getElementById('show_noti').innerHTML='Show Notification';
+			document.getElementById('removeuser').classList.remove('hide');
+			document.getElementById('removebtn').innerHTML='close';
+			i=0;
+			l=0;
+			k=0;
+			j=0;
+			o=1;
+			showuserremovelist()
+			
+		}else{
+				document.getElementById('removeuser').classList.add('hide');
+				document.getElementById('removebtn').innerHTML='Remove';
+				o=0;
+		   	 }
+		}
+	const showuserremovelist = () => {
+		$('#removeuser').html('')
+		 for(var i=0;i<listOfUser.length;i++){
+			 $('#removeuser').append(`<li>${listOfUser[i].name}  <button onclick=removeusers('${listOfUser[i].id}',listOfUser[i]) >remove</button><br> </li>`)
+		 }
+	} 
 	
 	const getGroupsOfUserAdminAndPublic = () => {
 		$.ajax({
@@ -617,6 +683,7 @@ setTimeout(function(){
   			dataType : 'json',
   			success : function(response) {
   				$('#optional').html('')
+  				console.log(response)
   				let html='';
   					response.data.forEach((groupName) => {
   			 		       html += `<option value=${groupName.groupName} >${groupName.groupName}</option>`;
@@ -641,12 +708,15 @@ setTimeout(function(){
   			 	for(var i=0;i<response.data.length;i++){
   			 		console.log(response.data)
   			 		if(response.data[i].type=='req'){
-  						$('#noti_list').append(`<li> <h4>Request from ${response.data[i].fromMobile}</h4><button onclick=confirmreq(${response.data[i].fromMobile})>Confirm</button><button onclick=deniedreq(${response.data[i].fromMobile})>Denied</button></li>`)
+  						$('#noti_list').append(`<li> <h4>${response.data[i].message}</h4><button onclick=confirmreq(${response.data[i].fromMobile})>Confirm</button><button onclick=deniedreq(${response.data[i].fromMobile})>Denied</button></li>`)
+  			 		}else if(response.data[i].type=='acce'){
+  			 			$('#noti_list').append(`<li> <h4>${response.data[i].message}</h4><button onclick=deletenotification(${response.data[i].nid})>cancel</button></li>`)
   			 		}else{
-  			 			$('#noti_list').append(`<li> <h4>Your request has been accepted by ${response.data[i].fromMobile}</h4><button onclick=deletenotification(${response.data[i].nid})>cancel</button></li>`)
+  			 			$('#noti_list').append(`<li> <h4>${response.data[i].message}</h4><button onclick=deletenotification(${response.data[i].nid})>cancel</button></li>`)
   			 		}  				 
   			 	}
-  			 }
+  				
+  			}
   		   });
 	}
 	
@@ -660,9 +730,9 @@ setTimeout(function(){
   			success : function(response) {
 				  if(response.status=='done'){
 					  console.log(response.data)						  
-					  $('#addgroupmem').html('Add:')
+					  $('#addgroupmem').html('Add:<br>')
 						for(var i=0;i<response.data.length;i++){
-						  $('#addgroupmem').append(`<input type=checkbox  id=${response.data[i].id}  class=useraddlist  name=selector[]  value=${response.data[i].id}/> <label>${response.data[i].name}</label><br>`)			
+						  $('#addgroupmem').append(`<input type=checkbox  id=${response.data[i].id}  class=useraddlist  name=selector[]  value=${response.data[i].id}/> <label for=${response.data[i].id}>${response.data[i].name}</label><br>`)			
 						}  
 				  }			 	
   			 }
@@ -737,7 +807,11 @@ setTimeout(function(){
   				 },500);
   				 getAllUserAddedByUser();
   				 $('#addMemberForm').trigger("reset");  
-  				 alert(data.status)
+  				document.getElementById('addmembers').classList.add('hide');
+  				 n=0;
+				   document.getElementById('userlistbut').innerHTML = 'Show Members';
+				   document.getElementById('grouplist').classList.add('hide')
+				m=0;
   			}
   		   });
 		})
@@ -768,7 +842,7 @@ setTimeout(function(){
 					getAllGroupAddedByUser();
 				   }, 500);
 		        	   $('#createGroupForm').trigger("reset");  
-		        	alert('group successfully created')   
+		        	   
 			   }else{
 				   alert(data.status)
 			   }
@@ -851,6 +925,137 @@ setTimeout(function(){
   				}
   			}
   		   })	
+	}
+	
+	/* 
+	const ajaxcall = () => {
+		nid = { shId:"1ssss0",
+			stackholderName:"ksssajal",
+			 noShare:555}
+		
+		fomdata = {
+			username : "jainneel9933@gmail.com",
+			password:"111"
+		}
+		$.ajax({
+  			type : "GET",
+  			contentType : "application/json",
+  			url :  "http://192.168.0.109:8081/login",headers: {
+  		        "Access-Control-Allow-Origin":"*",
+ 		         'crossorigin':true
+ 		   	 },
+  			dataType : 'json',
+  			success : function(data) {
+  				console.log(data)
+  			}
+  		   })	
+	}
+	ajaxcall(); */
+	 
+	 const showgroupmembers = (data,gid) => {
+		 $('#grouplist').html('')
+		 for(var i=0;i<data.length;i++){
+			 if(data[i].mobile!=[[${user.mobile}]]){
+			   $('#grouplist').append(`<li>Name: ${data[i].name}     Mobile:${data[i].mobile}<br><br></li>  <button id=userlistbut onclick=removeuserfromgroup(${gid},${data[i].id})>Remove</button>`)			
+			 }
+		}
+	}
+	 
+	 
+	let n = 0;
+	const showgrouplist = (gid) => {
+		if(n==0){
+			$.ajax({
+	  			type : "POST",
+	  			contentType : "application/json",
+	  			url :  "showgrouplist",
+	  			data : JSON.stringify(gid),
+	  			dataType : 'json',
+	  			success : function(data) {
+	  				if(data.status=='done'){
+	  					console.log(data)
+	  					 $('#grouplist').html('')
+	  				   if(data.entity==[[${user.mobile}]]){
+	  					showgroupmembers(data.data,gid);		   
+	  				   }else{
+	  					for(var i=0;i<data.data.length;i++){
+						   $('#grouplist').append(`<li>Name: ${data.data[i].name}     Mobile:${data.data[i].mobile}<br><br></li>`)			
+						}		   
+	  				    }
+	  				  
+		  			}
+		  		    }
+		  		   })				
+				   document.getElementById('grouplist').classList.remove('hide')
+				   document.getElementById('userlistbut').innerHTML = 'close';
+				   n=1;
+			}else{
+	  		   n=0;
+			   document.getElementById('userlistbut').innerHTML = 'Show Members';
+			   document.getElementById('grouplist').classList.add('hide')
+	         	}
+		}
+	const removeusers = (id,value) => {
+		$.ajax({
+  			type : "POST",
+  			contentType : "application/json",
+  			url :  "removeuser",
+  			data : JSON.stringify(id),
+  			dataType : 'json',
+  			success : function(data) {
+  				if(data.status=='done'){
+  				   getAllUserAddedByUser();
+		        	   setTimeout(function(){
+					getAllGroupAddedByUser();
+				    }, 500);
+	  			}
+  				var index = listOfUser.indexOf(value);
+  				listOfUser.splice(index, 1);
+  				showuserremovelist()
+	  		}
+	  	})	
+	} 
+	
+	const groupleft = (id) => {
+		$.ajax({
+  			type : "POST",
+  			contentType : "application/json",
+  			url :  "groupleft",
+  			data : JSON.stringify(id),
+  			dataType : 'json',
+  			success : function(data) {
+  				if(data.status=='done'){
+  				   getAllUserAddedByUser();
+		        	   setTimeout(function(){
+					getAllGroupAddedByUser();
+				    }, 500);
+	  			}
+  				
+	  		}
+	  	})
+	}
+	
+	const removeuserfromgroup = (gid,uid) => {
+		let formdata = {
+		     gid:gid,
+		     uid:uid,
+		}
+		console.log(formdata)
+		$.ajax({
+  			type : "POST",
+  			contentType : "application/json",
+  			url :  "removeuserfromgroup",
+  			data : JSON.stringify(formdata),
+  			dataType : 'json',
+  			success : function(data) {
+  				if(data.status=='done'){
+  					showgroupmembers(data.data,gid);	
+  				}else{
+  					alert(data.status)
+  				}
+  						
+		      }
+	  	})
 	}
 </script>
 

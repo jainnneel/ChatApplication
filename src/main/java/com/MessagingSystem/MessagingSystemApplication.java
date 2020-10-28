@@ -3,6 +3,7 @@ package com.MessagingSystem;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
@@ -10,6 +11,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @ComponentScan(basePackages={"com"})
 @EnableJpaRepositories(basePackages={"com.service"})
 @EntityScan(basePackages={"com.model"})
+@EnableCaching
 public class MessagingSystemApplication {
 
 	public static void main(String[] args) {

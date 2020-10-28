@@ -1,5 +1,6 @@
 package com.service;
 
+import java.util.HashSet;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,5 +25,8 @@ public interface GroupService extends JpaRepository<GroupChat,Integer> {
      */
     
     @Query(value = "select groupchat from GroupChat groupchat JOIN groupchat.entities en WHERE (en.id = ?1 AND groupchat.typeOfGroup =?4) OR (groupchat.typeOfGroup =?2 AND groupchat.admin =?3)")
-    List<GroupChat> getGroupsOfUserAdminAndPublic(int entityid,String type,UserEntity entity,String type1);
+    HashSet<GroupChat> getGroupsOfUserAdminAndPublic(int entityid,String type,UserEntity entity,String type1);
+
+    @Query(value = "select admin from GroupChat groupchat WHERE groupchat.gid = ?1")
+    UserEntity getAdminByGroupId(int parseInt);
 }

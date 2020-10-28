@@ -46,7 +46,7 @@ public class OfflineNotiImpl {
         List<OfflineNotifiacation> list=null;  
         boolean noti=false;
         try {
-            list =  notificationService.findByTofromMobile(mobile);
+            list =  notificationService.findByTofromMobile(mobile,false);
             if(list.size()>0) {
                 noti=true;
             }
@@ -64,6 +64,10 @@ public class OfflineNotiImpl {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+    }
+
+    public void setAllNotiOfUserSeen(String fromMobile) {
+        notificationService.setAllNotiOfUserSeen(true,fromMobile);
     }
     
     
