@@ -1,5 +1,6 @@
 # ChatApplication
-Chat Application using spring boot and websocket
+Backend :  Chat Application using spring boot,websocket
+Frontend : React
 
 
 Features : 
@@ -11,4 +12,6 @@ Features :
     2.Public Group
   
   3.Prevent From Anonymous messaging(Secure)  
+
+  4. Encryption
   
