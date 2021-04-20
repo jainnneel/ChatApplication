@@ -2,7 +2,7 @@ Chat Application
 
 Backend: Spring boot
 
-Frontend: ReactJS https://github.com/jainnneel/ChatReactClient.git
+Frontend: ReactJS https://github.com/jainnneel/Chat-Application-React-client-/tree/master
 
 Web-push notifications Firebase
 
