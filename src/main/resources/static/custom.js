@@ -20,7 +20,7 @@ function cacheDOM() {
     $chatHistoryList = $chatHistory.find('ul');
 }
 
-function render(message, userName) {
+function render(message, userName , chatid) {
     scrollToBottom();
     // responses
     var templateResponse = Handlebars.compile($("#message-response-template").html());
@@ -28,7 +28,8 @@ function render(message, userName) {
     var contextResponse = {
         response: message,
         time: getCurrentTime(),
-        userName: userName
+        userName: userName,
+        chat_id: chatid
     };
     setTimeout(function () {
         $chatHistoryList.append(templateResponse(contextResponse));

@@ -28,7 +28,9 @@ public class UserEntity implements Serializable {
     private int id;
     private String name;
     private String mobile;
+    @JsonIgnore
     private String pass;
+    @JsonIgnore
     private boolean isEnable;
     private Date dor;
     
@@ -41,6 +43,11 @@ public class UserEntity implements Serializable {
     
     @Transient
     private String status;
+    
+    private String lastseen;
+    
+    private String webpushToken;
+    
     public UserEntity() {
         super();
         // TODO Auto-generated constructor stub
@@ -103,8 +110,18 @@ public class UserEntity implements Serializable {
     public void setStatus(String status) {
         this.status = status;
     }
-    
-    
+    public String getLastseen() {
+        return lastseen;
+    }
+    public void setLastseen(String lastseen) {
+        this.lastseen = lastseen;
+    }
+    public String getWebpushToken() {
+        return webpushToken;
+    }
+    public void setWebpushToken(String webpushToken) {
+        this.webpushToken = webpushToken;
+    }
     
     
 }

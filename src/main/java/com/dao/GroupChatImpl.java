@@ -24,7 +24,7 @@ public class GroupChatImpl {
     @Autowired
     private AddingImpl userAdded;
 
-    @Cacheable(value = "usersCache" , key = "#p3")
+//    @Cacheable(value = "usersCache" , key = "#p3")
     public GroupChat getGroupByName(String groupName) {
         System.out.println("getting group by name");
         GroupChat groupChat = null;
@@ -128,7 +128,7 @@ public class GroupChatImpl {
         return null;
     }
     
-    @Cacheable(value = "usersCache" , key = "#p2")
+//    @Cacheable(value = "usersCache" , key = "#p2")
     public UserEntity getAdminByGroupId(String gid) {
         System.out.println("getting group by id");
         UserEntity entity = null;

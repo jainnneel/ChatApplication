@@ -14,6 +14,7 @@ import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import com.dao.AddingImpl;
+import com.dao.UserImpl;
 import com.model.OnlineStatus;
 import com.model.UserEntity;
 
@@ -22,7 +23,10 @@ public class WebSocketSessionListener {
     
     @Autowired
     AddingImpl addingImpl;
-
+        
+    @Autowired
+    UserImpl userimpl;
+    
     @Autowired
     private SimpMessagingTemplate simpMessagingTemplate;
     
@@ -43,6 +47,7 @@ public class WebSocketSessionListener {
          * connectedClientId.add((String) sha.getSessionAttributes().get("username"));
          */
         System.out.println("connecteddddddddddddddd");
+        
         System.out.println(connectedClientId.toString());   
         /*
          * if (nativeHeaders != null) { String userId = nativeHeaders.get(0);
@@ -78,11 +83,16 @@ public class WebSocketSessionListener {
         for(UserEntity u:entities) {
             simpMessagingTemplate.convertAndSend("/topic/status/"+u.getMobile(),new OnlineStatus(mobile,"ofline"));
         }
+        updateuserlastlogin(mobile);
       System.out.println(connectedClientId.remove(mobile)); 
       System.out.println(connectedClientId.size());
       System.out.println("disssconnecteddddddddddddddd");
       
 
+    }
+
+    private void updateuserlastlogin(String mobile) {
+        userimpl.updatelastseen(mobile);
     }
 
     public static List<String> getConnectedClientId() {

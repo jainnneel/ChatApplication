@@ -1,11 +1,13 @@
 package com.dao;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.model.ChatMessage;
+import com.model.MessageModel;
 import com.service.ChatMessageService;
 
 @Service
@@ -24,16 +26,35 @@ public class ChastMessageImpl {
         return chatMessage2;
     }
     
-    public List<ChatMessage> getAllMessageForUser(String tomobile,String fromMobile){
+    public List<MessageModel> getAllMessageForUser(String tomobile,String fromMobile){
         List<ChatMessage> chatMessages = null;
+        System.out.println(tomobile.substring(1,tomobile.length()-1));
+        
         try {
-            chatMessages =  chatMessageService.getAllMessageForUser(tomobile,fromMobile);
+            chatMessages =  chatMessageService.getAllMessageForUser(tomobile.substring(1,tomobile.length()-1),fromMobile);
+            System.out.println(chatMessages);
+            
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return chatMessages;
+        return getMessageModel(chatMessages);
     }
     
+    private List<MessageModel> getMessageModel(List<ChatMessage> chatMessages) {
+        List<MessageModel> list= new ArrayList<>();
+        chatMessages.forEach(chat -> {
+            MessageModel messageModel = new MessageModel();
+            messageModel.setChatId(chat.getId());
+            messageModel.setFromLogin(chat.getFromMobile());
+            messageModel.setToUser(chat.getToMobile());
+            messageModel.setSeenOrNot(chat.getSeenOrNot());
+            messageModel.setMessage(chat.getMessage());
+            messageModel.setDate(chat.getDate());
+            list.add(messageModel);
+        });
+        return list;
+    }
+
     public List<ChatMessage> getAllMessageForGroup(String groupName){
         List<ChatMessage> chatMessages = null;
         try {
@@ -78,5 +99,9 @@ public class ChastMessageImpl {
             e.printStackTrace();
         }
         return mobileList;
+    }
+
+    public ChatMessage getChatmessage(String messageid) {
+        return chatMessageService.findById(messageid).get();
     }
 }

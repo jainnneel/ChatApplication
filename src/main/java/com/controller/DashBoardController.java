@@ -1,8 +1,11 @@
 package com.controller;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,12 +15,14 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.MessagingSystem.pushnotification.FCMService;
+import com.MessagingSystem.pushnotification.PushNotificationRequest;
 import com.dao.AddingImpl;
 import com.dao.ChastMessageImpl;
 import com.dao.GroupChatImpl;
@@ -35,6 +40,7 @@ import com.model.UserEntity;
 import com.websocketconfigre.WebSocketSessionListener;
 
 @Controller
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class DashBoardController {
 
     @Autowired
@@ -55,6 +61,8 @@ public class DashBoardController {
     @Autowired
     private OfflineNotiImpl offlineNotiImpl;
 
+    @Autowired
+    FCMService fcmService;
    
 
     @RequestMapping(value = "/home")
@@ -64,9 +72,10 @@ public class DashBoardController {
         return "home";
     }
 
-    @RequestMapping(value = "adduser", consumes = MediaType.APPLICATION_JSON_VALUE,method = RequestMethod.POST)
+    @RequestMapping(value = "adduser", consumes = MediaType.ALL_VALUE ,method = RequestMethod.POST)
     @ResponseBody
-    public ResponseEntity addUser(@RequestBody Object mobile, @AuthenticationPrincipal UserDetails details) {
+    public ResponseEntity addUser(@RequestBody String mobile, @AuthenticationPrincipal UserDetails details) {
+        mobile = mobile.substring(1,mobile.length()-1);
         UserEntity addedByUser = userImpl.getUserByMobile(details.getUsername());
         UserEntity addedUser = userImpl.getUserByMobile(mobile.toString());
         boolean existOrnot = addingImpl.checkAreadyAddedOrNot(addedByUser, addedUser);
@@ -74,6 +83,9 @@ public class DashBoardController {
             if (addedByUser == addedUser || existOrnot) {
                 return new ResponseEntity("alreadyAdded", null);
             } else {
+                if (addedUser.getWebpushToken()!=null || !addedUser.getWebpushToken().equals("")) {
+                    sendNotification(addedUser.getWebpushToken(), addedByUser.getName()+" send request to add","Adding request");
+                }
                 if(WebSocketSessionListener.getConnectedClientId().contains(mobile.toString().trim())==true) {
                     simpMessagingTemplate.convertAndSend("/topic/notimessages/"+mobile.toString(),new MessageModel());
                     offlineNotiImpl.createOfflineMessage(new OfflineNotifiacation(addedByUser.getName()+" ( "+addedByUser.getMobile()+" ) "+"send request",mobile.toString(),addedByUser.getMobile(),"req",false));
@@ -88,17 +100,24 @@ public class DashBoardController {
         }
     }
     
-    @RequestMapping(value = "addUseToContact", consumes = MediaType.APPLICATION_JSON_VALUE,method = RequestMethod.POST)
+    @RequestMapping(value = "addUseToContact", consumes = MediaType.ALL_VALUE,method = RequestMethod.POST)
     @ResponseBody
-    public ResponseEntity addUseToContact(@RequestBody Object mobile, @AuthenticationPrincipal UserDetails details) {
+    public ResponseEntity addUseToContact(@RequestBody String mobile, @AuthenticationPrincipal UserDetails details) {
+        mobile = mobile.substring(1,mobile.length()-1);
         UserEntity addedByUser = userImpl.getUserByMobile(details.getUsername());
         UserEntity addedUser = userImpl.getUserByMobile(mobile.toString());
+        if (addedUser.getWebpushToken()!=null || !addedUser.getWebpushToken().equals("")) {
+            sendNotification(addedUser.getWebpushToken(), addedByUser.getName()+" accept your request and now you can send message","Accept your request");
+        }
         addingImpl.createUser(new UserAdded(addedByUser, addedUser));
         addingImpl.createUser(new UserAdded(addedUser, addedByUser));
         offlineNotiImpl.deleteNotificationForUser(addedUser.getMobile().trim(),addedByUser.getMobile().trim());
         offlineNotiImpl.createOfflineMessage(new OfflineNotifiacation(addedByUser.getName()+" ( "+addedByUser.getMobile()+" ) "+"accept your request",mobile.toString(),addedByUser.getMobile(),"acce",false));
-        simpMessagingTemplate.convertAndSend("/topic/notimessage/"+mobile.toString(),addedByUser);
-        return new ResponseEntity("added", null);
+//        simpMessagingTemplate.convertAndSend("/topic/notimessage/"+mobile.toString(),addedByUser);
+        simpMessagingTemplate.convertAndSend("/topic/notimessages/"+addedUser.getMobile(),new MessageModel());
+        simpMessagingTemplate.convertAndSend("/topic/addnewuser/"+addedUser.getMobile(),addedByUser);
+        
+        return new ResponseEntity("added", addedUser);
     }
     
     @RequestMapping(value = "addgroup", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -122,12 +141,12 @@ public class DashBoardController {
     
     @RequestMapping(value = "getAllUserAddedByUser",consumes = MediaType.ALL_VALUE,method = RequestMethod.POST)
     @ResponseBody
-    public List<UserEntity> getAllUserAddedByUser(@RequestBody Object mobile){
-        List<UserEntity> listEntity = addingImpl.getAllUserAddedByUser(mobile.toString());
+    public List<UserEntity> getAllUserAddedByUser(@RequestBody String mobile,@AuthenticationPrincipal UserDetails details){
+        List<UserEntity> listEntity = addingImpl.getAllUserAddedByUser(details.getUsername());
         for(UserEntity user:listEntity) {
             if(WebSocketSessionListener.getConnectedClientId().contains(user.getMobile())==true) {
                 System.out.println(user.getMobile()+"onlineonline");
-                user.setStatus("   online");
+                user.setStatus("online");
             }
             else{
                 user.setStatus("");
@@ -143,9 +162,11 @@ public class DashBoardController {
         return listGroups;
     }   
     
-    @RequestMapping(value = "getUserChat",consumes = MediaType.ALL_VALUE,method = RequestMethod.POST)
+    @RequestMapping(value = "getUserChat",consumes = MediaType.ALL_VALUE,method = RequestMethod.POST,produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public List<ChatMessage> getUserChat(@RequestBody Object userName,@AuthenticationPrincipal UserDetails details){
+    public List<MessageModel> getUserChat(@RequestBody String userName,@AuthenticationPrincipal UserDetails details){
+        System.out.println(details.getUsername());
+        System.out.println(chatImpl.getAllMessageForUser(userName.toString(),details.getUsername()));
         return chatImpl.getAllMessageForUser(userName.toString(),details.getUsername());
     }
     
@@ -158,12 +179,27 @@ public class DashBoardController {
     
     @RequestMapping(value = "deleteuser",consumes = MediaType.ALL_VALUE,method = RequestMethod.POST)
     @ResponseBody
-    public ResponseEntity deleteMessage(@RequestBody Object messageid){
-        if(chatImpl.deletemessage(messageid.toString())) {
-            return new ResponseEntity("done", null);
+    public ResponseEntity deleteMessage(@RequestBody String messageid){
+        System.out.println(messageid);
+        if (messageid.length()==17) {
+            ChatMessage message = chatImpl.getChatmessage(messageid);
+            if(chatImpl.deletemessage(messageid)) {
+                simpMessagingTemplate.convertAndSend("/topic/deletemessages/"+ message.getToMobile(),message);
+                return new ResponseEntity("done", null);
+            }else {
+                return new ResponseEntity("not", null);
+            }  
         }else {
-            return new ResponseEntity("not", null);
+            messageid = messageid.substring(1, messageid.length()-1);
+            ChatMessage message = chatImpl.getChatmessage(messageid);
+            if(chatImpl.deletemessage(messageid)) {
+                simpMessagingTemplate.convertAndSend("/topic/deletemessages/"+message.getToMobile(),message);
+                return new ResponseEntity("done", null);
+            }else {
+                return new ResponseEntity("not", null);
+            }  
         }
+       
     }
    
     @RequestMapping(value = "deniedrequest",consumes = MediaType.ALL_VALUE,method = RequestMethod.POST)
@@ -177,14 +213,16 @@ public class DashBoardController {
     
     @RequestMapping(value = "getNotification",consumes = MediaType.ALL_VALUE,method = RequestMethod.POST)
     @ResponseBody
-    public ResponseEntity getNotification(@RequestBody Object mobile){
-        List<OfflineNotifiacation> notification = offlineNotiImpl.getallNotificationofuser(mobile.toString());
+    public ResponseEntity getNotification(@RequestBody String mobile){
+        mobile = mobile.substring(1,mobile.length()-1);
+        List<OfflineNotifiacation> notification = offlineNotiImpl.getallNotificationofuser(mobile);
         return new ResponseEntity("done", notification);
     }
     
     @RequestMapping(value = "deleteNotification",consumes = MediaType.ALL_VALUE,method = RequestMethod.POST)
     @ResponseBody
-    public ResponseEntity deleteNotification(@RequestBody Object nid){
+    public ResponseEntity deleteNotification(@RequestBody String nid){
+//        nid = nid.substring(1,nid.length()-1);
         offlineNotiImpl.deletenotification(Integer.parseInt(nid.toString().trim()));
         return new ResponseEntity("done", null);
     }
@@ -279,4 +317,19 @@ public class DashBoardController {
         }
     }
     
+    private boolean sendNotification(String token,String message,String title) {
+        PushNotificationRequest pushNotificationRequest=new PushNotificationRequest();
+        pushNotificationRequest.setMessage(message);
+        pushNotificationRequest.setTitle(title);
+        pushNotificationRequest.setToken(token);
+        Map<String, String> appData= new HashMap<>();
+            appData.put("name", "PushNotification");
+        try {
+            fcmService.sendMessage(appData, pushNotificationRequest);
+            return true;
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }

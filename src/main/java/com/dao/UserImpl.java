@@ -1,22 +1,20 @@
 package com.dao;
 
-import java.util.ArrayList;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import com.dto.UserDto;
 import com.model.GroupChat;
 import com.model.UserEntity;
 import com.service.UserRepository;
 
 @Service
-public class UserImpl implements UserDetailsService {
+public class UserImpl{
 
     @Autowired
     UserRepository userRepo;
@@ -24,13 +22,7 @@ public class UserImpl implements UserDetailsService {
     @Autowired
     GroupChatImpl groupImpl;
     
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserEntity entity =  getUserByMobile(username);
-        return new User(entity.getMobile(), entity.getPass(), entity.isEnable(), true, true, true, new ArrayList<>());
-    }
     
-    @Cacheable(value = "usersCache" , key = "#p0")
     public UserEntity getUserByMobile(String mobile) {
         System.out.println("grtting userRepo by its mobile number");
         UserEntity entity=null;
@@ -75,9 +67,8 @@ public class UserImpl implements UserDetailsService {
         return entities;
     }
     
-    @Cacheable(value = "usersCache" , key = "#p1")
+//    @Cacheable(value = "usersCache" , key = "#p1")
     public UserEntity getUserByMobile(int id) {
-        System.out.println("getting user by its id");
         UserEntity entity = null ;
         try {
             entity = userRepo.findById(id).get();
@@ -86,6 +77,33 @@ public class UserImpl implements UserDetailsService {
             e.printStackTrace();
         }
         return entity;
+    }
+
+    public UserEntity createuser(UserDto userDto) {
+       try {
+        UserEntity entity = new UserEntity();
+           entity.setMobile(userDto.getMobile());
+           entity.setName(userDto.getUsername());
+           entity.setPass(userDto.getPass());
+           entity.setEnable(false);
+           return  userRepo.save(entity);
+    } catch (Exception e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+    }
+       return null;
+   }
+
+    public void updatelastseen(String mobile) {
+        UserEntity entity =  getUserByMobile(mobile);
+        entity.setLastseen(LocalDateTime.of(LocalDate.now(), LocalTime.now()).toString());
+        userRepo.save(entity);
+    }
+
+    public void updateToken(String username, String token1) {
+        UserEntity entity =  getUserByMobile(username);
+        entity.setWebpushToken(token1);
+        userRepo.save(entity);
     }
     
 

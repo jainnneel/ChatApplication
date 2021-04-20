@@ -162,7 +162,7 @@
 </script>
 
 <script id="message-response-template" type="text/x-handlebars-template">
-    <li id="messages_{{messageid}}">
+    <li id="messages_{{chat_id}}">
         <div class="message-data">
             <span class="message-data-name"><i class="fa fa-circle online"></i> {{userName}}</span>
             <span class="message-data-time">{{time}}</span>
@@ -195,7 +195,7 @@ function connectToChat(userName) {
     	stompClient.subscribe("/topic/messages/" + userName, function (response) {
         	let data = JSON.parse(response.body);
       	    if (selectedUser == data.fromLogin) {
-      	    	render(data.message, data.fromLogin);
+      	    	render(data.message, data.fromLogin , data.chatId);
       	    	sendreadNotification(data.fromLogin,userName)
             }else {
                 newMessages.set(data.fromLogin, data.message);
@@ -367,7 +367,7 @@ const fetchGroupChat = (groupName) => {
 function sendMsg(from, text,chatId) {
 	
    if(toMessage==0){
-	   console.log(from)
+	console.log(from)
 	stompClient.send("/app/chat/" + selectedUser, {}, JSON.stringify({
        		 fromLogin: from,
       		 message: text,
@@ -764,6 +764,7 @@ setTimeout(function(){
 		})
 		
 	$('#addgroup').submit(function(event){
+		console.log("neeljain")
 		event.preventDefault();
 		 $.ajax({
   			type : "POST",

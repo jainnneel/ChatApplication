@@ -64,6 +64,4 @@ public class ChatMessage {
         this.seenOrNot = seenOrNot;
     }
     
-    
-    
 }
