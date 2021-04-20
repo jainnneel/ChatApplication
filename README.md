@@ -1,17 +1,17 @@
-# ChatApplication
-Backend :  Chat Application using spring boot,websocket
-Frontend : React
+Chat Application
 
+Backend: Spring boot
 
-Features : 
+Frontend: ReactJS
 
-  1. Realtime messaging(Websocket Stome Client - Public/Subscriber Model)
-  
-  2. Group Messaging
-      1.Private Group
-      2.Public Group
-  
-  3.Prevent From Anonymous messaging(Secure)  
+Web-push notifications Firebase
 
-  4. Encryption
-  
+User permissive conversation
+
+Offline message storage
+
+Group chats (public/private)
+
+encryption(AES Algorithm)
+
+End to End encryption mode (Signal protocol)
