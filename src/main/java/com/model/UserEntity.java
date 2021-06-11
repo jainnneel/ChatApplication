@@ -14,24 +14,28 @@ import javax.persistence.ManyToMany;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 public class UserEntity implements Serializable {
 
-    /**
-     * 
-     */
     private static final long serialVersionUID = 1L;
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
+    
     private String name;
+    
     private String mobile;
+    
     @JsonIgnore
     private String pass;
+    
     @JsonIgnore
     private boolean isEnable;
+    
     private Date dor;
     
     @ManyToMany(mappedBy = "entities",fetch = FetchType.LAZY,cascade = {CascadeType.REMOVE})
@@ -39,6 +43,7 @@ public class UserEntity implements Serializable {
     private List<GroupChat> groupChat;
     
     @OneToMany(mappedBy = "admin")
+    @JsonIgnore
     private List<GroupChat> groupadmin;
     
     @Transient
@@ -48,9 +53,20 @@ public class UserEntity implements Serializable {
     
     private String webpushToken;
     
+    @OneToMany(mappedBy = "adminUser")
+    @JsonIgnore
+    private List<StockMarketGroup> stockGroupAdmin;
+    
+    @ManyToMany(mappedBy = "groupMembers",fetch = FetchType.LAZY,cascade = {CascadeType.REMOVE})
+    @JsonIgnore
+    private List<StockMarketGroup> stockGroups;
+    
+    @OneToMany(mappedBy = "entity",fetch = FetchType.LAZY,cascade = {CascadeType.REMOVE})
+    @JsonIgnore
+    private List<GroupBooking> bookings;
+    
     public UserEntity() {
         super();
-        // TODO Auto-generated constructor stub
     }
     public UserEntity(int id, String name, String mobile, String pass, Date dor) {
         super();
@@ -121,6 +137,24 @@ public class UserEntity implements Serializable {
     }
     public void setWebpushToken(String webpushToken) {
         this.webpushToken = webpushToken;
+    }
+    public List<GroupChat> getGroupadmin() {
+        return groupadmin;
+    }
+    public void setGroupadmin(List<GroupChat> groupadmin) {
+        this.groupadmin = groupadmin;
+    }
+    public List<StockMarketGroup> getStockGroupAdmin() {
+        return stockGroupAdmin;
+    }
+    public void setStockGroupAdmin(List<StockMarketGroup> stockGroupAdmin) {
+        this.stockGroupAdmin = stockGroupAdmin;
+    }
+    public List<StockMarketGroup> getStockGroups() {
+        return stockGroups;
+    }
+    public void setStockGroups(List<StockMarketGroup> stockGroups) {
+        this.stockGroups = stockGroups;
     }
     
     

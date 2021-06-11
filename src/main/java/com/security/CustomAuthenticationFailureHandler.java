@@ -13,6 +13,9 @@ import org.springframework.security.web.WebAttributes;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
 
+import com.dao.OtpImplemetation;
+import com.dao.UserImpl;
+import com.model.UserEntity;
 import com.service.LoginAttemptService;
 
 @Component
@@ -21,26 +24,39 @@ public class CustomAuthenticationFailureHandler extends SimpleUrlAuthenticationF
     @Autowired
     private LoginAttemptService loginAttemptService;
     
+    @Autowired 
+    UserImpl userimpl;
+    
+    @Autowired
+    private OtpImplemetation otpService;
     
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException exception) throws IOException, ServletException {
         
         loginAttemptService.loginFailed(getClientIP(request));
-        setDefaultFailureUrl("/loginattemtfailed");
-        super.onAuthenticationFailure(request, response, exception);
-        String errorMessage = "incorrect details";
         
-        if (exception.getMessage()
-                .equalsIgnoreCase("blocked")) {
-                    errorMessage = "user blocked";
-        }   
-        HttpSession session = request.getSession(false);
-        System.out.println(request);
-        if (session!=null) {
-            session
-            .setAttribute(WebAttributes.AUTHENTICATION_EXCEPTION, errorMessage); 
-        }
+        if (request.getAttribute("userMobile")!=null) {
+            UserEntity entity =   userimpl.getUserByMobile((String)request.getAttribute("userMobile"));
+            otpService.resendOtp(entity);
+            setDefaultFailureUrl("/loginattemtfailed1");
+       }else {
+           setDefaultFailureUrl("/loginattemtfailed");
+           
+           String errorMessage = "incorrect details";
+           
+           if (exception.getMessage()
+                   .equalsIgnoreCase("blocked")) {
+                       errorMessage = "user blocked";
+           }   
+           HttpSession session = request.getSession(false);
+           System.out.println(request);
+           if (session!=null) {
+               session
+               .setAttribute(WebAttributes.AUTHENTICATION_EXCEPTION, errorMessage); 
+           }
+       }
+        super.onAuthenticationFailure(request, response, exception);
     }
     private String getClientIP(HttpServletRequest request) {
         String xfHeader = request.getHeader("X-Forwarded-For");

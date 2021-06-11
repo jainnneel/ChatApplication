@@ -34,8 +34,6 @@ public class CustomAuthenticationprovider implements AuthenticationProvider {
     @Autowired
     private LoginAttemptService loginAttemptService;
     
-    @Autowired
-    private OtpImplemetation otpService;
     
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
@@ -63,8 +61,8 @@ public class CustomAuthenticationprovider implements AuthenticationProvider {
           
         if (userEntity!=null) {
             if (!userEntity.isEnable()) {
-                otpService.resendOtp(userEntity);
-                throw new UserNotExists("Verify your mobile");
+                request.setAttribute("userMobile", userEntity.getMobile());
+//                otpService.resendOtp(userEntity);
             }
             if (userEntity.getMobile().equals(username.toLowerCase()) && userEntity.getPass().equals(password) && userEntity.isEnable()) {
                 List<GrantedAuthority> grantedAuths = new ArrayList<>();

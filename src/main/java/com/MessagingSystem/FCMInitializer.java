@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
+import com.twilio.Twilio;
 
 @Service
 public class FCMInitializer {
@@ -21,6 +22,7 @@ public class FCMInitializer {
     public void initialize() {
         try {
             System.out.println(firebaseConfigPath);
+            Twilio.init("xxxxxxxxxxxxxxxx", "xxxxxxxxxxxxxxxxxxxxxx");
             FirebaseOptions options = new FirebaseOptions.Builder()
                 .setCredentials(GoogleCredentials.fromStream(new ClassPathResource(firebaseConfigPath).getInputStream())).build();
             if (FirebaseApp.getApps().isEmpty()) {
