@@ -1,15 +1,20 @@
 package com.dao;
 
+import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+
+import javax.swing.text.DateFormatter;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.dto.UserDto;
 import com.model.GroupChat;
+import com.model.StockMarketGroup;
 import com.model.UserEntity;
 import com.service.UserRepository;
 
@@ -86,6 +91,7 @@ public class UserImpl{
            entity.setName(userDto.getUsername());
            entity.setPass(userDto.getPass());
            entity.setEnable(false);
+           entity.setDor(Date.valueOf(LocalDate.now()));
            return  userRepo.save(entity);
     } catch (Exception e) {
         // TODO Auto-generated catch block
@@ -95,9 +101,11 @@ public class UserImpl{
    }
 
     public void updatelastseen(String mobile) {
-        UserEntity entity =  getUserByMobile(mobile);
-        entity.setLastseen(LocalDateTime.of(LocalDate.now(), LocalTime.now()).toString());
-        userRepo.save(entity);
+        if(mobile != null && !mobile.equals("")) {
+            UserEntity entity =  getUserByMobile(mobile);
+            entity.setLastseen(LocalTime.now().getHour()+":"+LocalTime.now().getMinute());
+            userRepo.save(entity);
+        }
     }
 
     public void updateToken(String username, String token1) {
@@ -105,6 +113,7 @@ public class UserImpl{
         entity.setWebpushToken(token1);
         userRepo.save(entity);
     }
+
     
 
 //    public void addingUserListToGroup(List<UserEntity> entities, GroupChat groupchat) {

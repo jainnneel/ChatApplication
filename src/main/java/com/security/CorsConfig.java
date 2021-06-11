@@ -12,7 +12,7 @@ public class CorsConfig extends WebMvcConfigurerAdapter {
         // TODO Auto-generated method stub
         super.addCorsMappings(registry);
         registry.addMapping("/**")
-        .allowedOrigins("http://localhost:3000")
+        .allowedOrigins("http://localhost:3000","http://192.168.0.109:3000")
         .allowedMethods("HEAD", "GET", "PUT", "POST", "DELETE", "PATCH");
     }
 }

@@ -20,13 +20,16 @@ import com.dao.ChastMessageImpl;
 import com.dao.GroupChatImpl;
 import com.dao.OfflineMessageImpl;
 import com.dao.OfflineNotiImpl;
+import com.dao.StockGroupImpl;
 import com.dao.UserImpl;
+import com.dto.GroupMessageDto;
 import com.dto.MessageModelE2ee;
 import com.model.ChatMessage;
 import com.model.GroupChat;
 import com.model.MessageModel;
 import com.model.OfflineMessage;
 import com.model.OnlineStatus;
+import com.model.StockMarketGroup;
 import com.model.UserEntity;
 import com.websocketconfigre.WebSocketSessionListener;
 
@@ -57,15 +60,19 @@ public class MessageController {
     @Autowired
     FCMService fcmService;
     
+    @Autowired
+    private StockGroupImpl marketGroup;
+    
     @MessageMapping("/chat/{to}")
     public void sendMessage(@DestinationVariable String to,@Payload MessageModel messageModel) {
         UserEntity userByMobile = userImpl.getUserByMobile(to);
         UserEntity sender = userImpl.getUserByMobile(messageModel.getFromLogin());
         System.out.println("message to   " + to +"  from  "+ messageModel.getFromLogin());
         System.out.println(WebSocketSessionListener.getConnectedClientId());
-        if (userByMobile.getWebpushToken()!=null || !userByMobile.getWebpushToken().equals("")) {
+        if (userByMobile.getWebpushToken()!=null && !userByMobile.getWebpushToken().equals("")) {
             sendNotification(userByMobile.getWebpushToken(), "" , "you have a message from "+sender.getName());
         }
+        System.out.println(WebSocketSessionListener.getConnectedClientId());
         if(WebSocketSessionListener.getConnectedClientId().contains(to.trim())==true) {
 
             if(userByMobile!=null) {
@@ -115,6 +122,31 @@ public class MessageController {
           }
         }
     }
+    
+  
+    @MessageMapping("/chat/group/{groupId}")
+    public void sendGroupMessage(@DestinationVariable("groupId") String groupid ,@Payload MessageModel messageModel) {
+            StockMarketGroup group =  marketGroup.getGroupById(groupid);
+            List<UserEntity> entities = marketGroup.getAllGroupMembers(groupid);
+            chatimpl.createChatMessage(new ChatMessage(messageModel.getChatId(),"",messageModel.getMessage(),messageModel.getFromLogin(),groupid,messageModel.getDate()));
+            for(UserEntity user:entities) {
+                
+                if(!messageModel.getFromLogin().trim().equals(user.getMobile().trim())) {
+                 
+                    if(WebSocketSessionListener.getConnectedClientId().contains(user.getMobile().trim())==true) {
+
+                     System.out.println("send!!!!!!!!");
+                     messageModel.setForgroup(true);
+                     simpMessagingTemplate.convertAndSend("/topic/messages/"+user.getMobile(),messageModel);
+
+                    }else {
+                     
+                     offlineService.createMessage(new OfflineMessage(messageModel.getChatId(),messageModel.getMessage(),messageModel.getToGroup(),user.getMobile(),messageModel.getDate()));
+                 }
+               }
+             }
+    }
+    
     
     @MessageMapping("/chat/delete/{to}")
     public void deleteMessage(@DestinationVariable String to,MessageModel messageModel) {
@@ -166,6 +198,8 @@ public class MessageController {
     public void readMessageNoti(@Payload ChatMessage chatMessage) {
         offlineNotiImpl.setAllNotiOfUserSeen(chatMessage.getFromMobile());
     }
+    
+    
     
     private boolean sendNotification(String token,String message,String title) {
         PushNotificationRequest pushNotificationRequest=new PushNotificationRequest();

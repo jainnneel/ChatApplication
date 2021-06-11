@@ -12,8 +12,10 @@ import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
 public class GroupChat implements Serializable {
@@ -28,7 +30,6 @@ public class GroupChat implements Serializable {
 
     @ManyToMany(cascade = {CascadeType.PERSIST})
     @JoinTable(name = "group_user", joinColumns = @JoinColumn(name = "group_id", referencedColumnName = "gid"), inverseJoinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"))
-    @JsonIgnore
     private List<UserEntity> entities;
     
     @ManyToOne

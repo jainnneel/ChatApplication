@@ -1,6 +1,7 @@
 package com.dao;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,7 @@ public class ChastMessageImpl {
         
         try {
             chatMessages =  chatMessageService.getAllMessageForUser(tomobile.substring(1,tomobile.length()-1),fromMobile);
+//            Collections.sort(chatMessages,(c1,c2) -> c2.getId().compareTo(c1.getId()));
             System.out.println(chatMessages);
             
         } catch (Exception e) {

@@ -9,7 +9,15 @@ public class MessageModel {
     private String date;
     private String toUser;
     private String status;
+    private boolean forgroup;
     
+    
+    public boolean isForgroup() {
+        return forgroup;
+    }
+    public void setForgroup(boolean forgroup) {
+        this.forgroup = forgroup;
+    }
     public MessageModel() {
         super();
         // TODO Auto-generated constructor stub
